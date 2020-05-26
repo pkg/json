@@ -1,7 +1,5 @@
 package json
 
-import "io"
-
 type buffer struct {
 	buf             []byte
 	released, valid int
@@ -15,16 +13,20 @@ func (b *buffer) releaseBack(elements int) {
 	b.valid -= elements
 }
 
+func (b *buffer) at(pos int) byte {
+	return b.buf[b.released+pos]
+}
+
 func (b *buffer) window() []byte {
 	return b.buf[b.released:b.valid]
 }
 
 func (b *buffer) avail() int {
-	return len(b.buf) - (b.valid - b.released)
+	return len(b.buf) - b.remaining()
 }
 
-func (b *buffer) capacity() int {
-	return cap(b.buf)
+func (b *buffer) remaining() int {
+	return b.valid - b.released
 }
 
 func (b *buffer) extend(request int) int {
@@ -75,50 +77,4 @@ func min(a, b int) int {
 		return a
 	}
 	return b
-}
-
-type source struct {
-	r   io.Reader
-	buf buffer
-	err error
-}
-
-func (s *source) window() []byte {
-	return s.buf.window()
-}
-
-func (s *source) release(elements int) {
-	s.buf.releaseFront(elements)
-}
-
-func (s *source) extend(elements int) int {
-	oldLen := len(s.buf.window())
-	const optimalReadSize = 8192
-
-	if elements == 0 || elements < optimalReadSize && s.buf.capacity() == 0 {
-		// optimal read, or first read. Use optimal read size
-		elements = optimalReadSize
-	} else {
-		// requesting a specific amount. Don't want to over-allocate the
-		// buffer, limit the request to 2x current elements, or optimal
-		// read size, whatever is larger.
-		cap := max(optimalReadSize, oldLen*2)
-		if elements > cap {
-			elements = cap
-		}
-	}
-
-	// ensure we maximize buffer use.
-	elements = max(elements, s.buf.avail())
-
-	if s.buf.extend(elements) == 0 {
-		// could not extend
-		return 0
-	}
-
-	var nread int
-	nread, s.err = s.r.Read(s.buf.window()[oldLen:])
-	// give back data we did not read.
-	s.buf.releaseBack(len(s.buf.window()) - oldLen - nread)
-	return nread
 }
