@@ -63,6 +63,8 @@ func BenchmarkDecoder(b *testing.B) {
 		{"code.json.gz", 217707},
 	}
 
+	var buffer [8 << 10]byte
+
 	for _, tc := range tests {
 
 		f, err := os.Open(filepath.Join("testdata", tc.path))
@@ -78,7 +80,7 @@ func BenchmarkDecoder(b *testing.B) {
 			b.SetBytes(int64(len(buf)))
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
-				dec := NewDecoder(bytes.NewReader(buf))
+				dec := NewDecoderBuffer(bytes.NewReader(buf), buffer[:])
 				n := 0
 				for {
 					_, err := dec.Token()

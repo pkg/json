@@ -8,9 +8,18 @@ import (
 
 // NewDecoder returns a new Decoder for the supplied Reader r.
 func NewDecoder(r io.Reader) *Decoder {
+	return NewDecoderBuffer(r, make([]byte, 8192))
+}
+
+// NewDecoder returns a new Decoder for the supplier Reader r, using
+// the []byte buf provided for working storage.
+func NewDecoderBuffer(r io.Reader, buf []byte) *Decoder {
 	return &Decoder{
 		scanner: &Scanner{
 			r: r,
+			buffer: buffer{
+				buf: buf,
+			},
 		},
 		step: stateValue,
 	}
