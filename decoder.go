@@ -19,7 +19,7 @@ func NewDecoder(r io.Reader) *Decoder {
 // A Decoder decodes JSON values from an input stream.
 type Decoder struct {
 	scanner *Scanner
-	step    func(*Decoder, []byte) ([]byte, error)
+	step    func(*Decoder) ([]byte, error)
 	stack   []bool
 }
 
@@ -45,11 +45,7 @@ type Decoder struct {
 //
 // Commas and colons are elided.
 func (d *Decoder) Token() ([]byte, error) {
-	tok := d.scanner.Next()
-	if len(tok) < 1 {
-		return nil, d.scanner.Error()
-	}
-	return d.step(d, tok)
+	return d.step(d)
 }
 
 func (d *Decoder) pop() bool {
@@ -60,11 +56,15 @@ func (d *Decoder) pop() bool {
 	return d.stack[len(d.stack)-1]
 }
 
-func stateEnd(d *Decoder, tok []byte) ([]byte, error) {
+func stateEnd(d *Decoder) ([]byte, error) {
 	return nil, io.EOF
 }
 
-func stateObjectString(d *Decoder, tok []byte) ([]byte, error) {
+func stateObjectString(d *Decoder) ([]byte, error) {
+	tok := d.scanner.Next()
+	if len(tok) < 1 {
+		return nil, d.scanner.Error()
+	}
 	switch tok[0] {
 	case '}':
 		inObj := d.pop()
@@ -85,7 +85,11 @@ func stateObjectString(d *Decoder, tok []byte) ([]byte, error) {
 	}
 }
 
-func stateObjectColon(d *Decoder, tok []byte) ([]byte, error) {
+func stateObjectColon(d *Decoder) ([]byte, error) {
+	tok := d.scanner.Next()
+	if len(tok) < 1 {
+		return nil, d.scanner.Error()
+	}
 	switch tok[0] {
 	case Colon:
 		d.step = stateObjectValue
@@ -95,7 +99,11 @@ func stateObjectColon(d *Decoder, tok []byte) ([]byte, error) {
 	}
 }
 
-func stateObjectValue(d *Decoder, tok []byte) ([]byte, error) {
+func stateObjectValue(d *Decoder) ([]byte, error) {
+	tok := d.scanner.Next()
+	if len(tok) < 1 {
+		return nil, d.scanner.Error()
+	}
 	switch tok[0] {
 	case '{':
 		d.step = stateObjectString
@@ -111,7 +119,11 @@ func stateObjectValue(d *Decoder, tok []byte) ([]byte, error) {
 	}
 }
 
-func stateObjectComma(d *Decoder, tok []byte) ([]byte, error) {
+func stateObjectComma(d *Decoder) ([]byte, error) {
+	tok := d.scanner.Next()
+	if len(tok) < 1 {
+		return nil, d.scanner.Error()
+	}
 	switch tok[0] {
 	case '}':
 		inObj := d.pop()
@@ -132,7 +144,11 @@ func stateObjectComma(d *Decoder, tok []byte) ([]byte, error) {
 	}
 }
 
-func stateArrayValue(d *Decoder, tok []byte) ([]byte, error) {
+func stateArrayValue(d *Decoder) ([]byte, error) {
+	tok := d.scanner.Next()
+	if len(tok) < 1 {
+		return nil, d.scanner.Error()
+	}
 	switch tok[0] {
 	case '{':
 		d.step = stateObjectString
@@ -161,7 +177,11 @@ func stateArrayValue(d *Decoder, tok []byte) ([]byte, error) {
 	}
 }
 
-func stateArrayComma(d *Decoder, tok []byte) ([]byte, error) {
+func stateArrayComma(d *Decoder) ([]byte, error) {
+	tok := d.scanner.Next()
+	if len(tok) < 1 {
+		return nil, d.scanner.Error()
+	}
 	switch tok[0] {
 	case ']':
 		inObj := d.pop()
@@ -182,7 +202,11 @@ func stateArrayComma(d *Decoder, tok []byte) ([]byte, error) {
 	}
 }
 
-func stateValue(d *Decoder, tok []byte) ([]byte, error) {
+func stateValue(d *Decoder) ([]byte, error) {
+	tok := d.scanner.Next()
+	if len(tok) < 1 {
+		return nil, d.scanner.Error()
+	}
 	switch tok[0] {
 	case '{':
 		d.step = stateObjectString
