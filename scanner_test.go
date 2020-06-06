@@ -1,17 +1,29 @@
 package json
 
 import (
+	"compress/gzip"
 	"io"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
 
 type SmallReader struct {
 	r io.Reader
+	n int
+}
+
+func (sm *SmallReader) next() int {
+	sm.n = (sm.n + 3) % 5
+	if sm.n < 1 {
+		sm.n++
+	}
+	return sm.n
 }
 
 func (sm *SmallReader) Read(buf []byte) (int, error) {
-	return sm.r.Read(buf[:min(3, len(buf))])
+	return sm.r.Read(buf[:min(sm.next(), len(buf))])
 }
 
 func TestScannerNext(t *testing.T) {
@@ -46,7 +58,7 @@ func TestScannerNext(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.in, func(t *testing.T) {
-			scanner := NewScanner(&SmallReader{strings.NewReader(tc.in)})
+			scanner := NewScanner(&SmallReader{r: strings.NewReader(tc.in)})
 			for n, want := range tc.tokens {
 				got := scanner.Next()
 				if string(got) != want {
@@ -99,6 +111,34 @@ func BenchmarkParseNumber(b *testing.B) {
 				if n != len(tc) {
 					b.Fatalf("failed")
 				}
+			}
+		})
+	}
+}
+
+func TestScanner(t *testing.T) {
+	for _, tc := range inputs {
+
+		f, err := os.Open(filepath.Join("testdata", tc.path))
+		check(t, err)
+		defer f.Close()
+		gz, err := gzip.NewReader(f)
+		check(t, err)
+		r := &SmallReader{r: gz}
+
+		t.Run(tc.path, func(t *testing.T) {
+			sc := &Scanner{
+				r: r,
+				buffer: buffer{
+					buf: _buf[:],
+				},
+			}
+			n := 0
+			for len(sc.Next()) > 0 {
+				n++
+			}
+			if n != tc.alltokens {
+				t.Fatalf("expected %v tokens, got %v", tc.alltokens, n)
 			}
 		})
 	}

@@ -14,14 +14,15 @@ import (
 var _buf [8 << 10]byte
 
 var inputs = []struct {
-	path   string
-	tokens int
+	path      string
+	tokens    int // decoded tokens
+	alltokens int // raw tokens, includes : and ,
 }{
 	// from https://github.com/miloyip/nativejson-benchmark
-	{"canada.json.gz", 223236},
-	{"citm_catalog.json.gz", 85035},
-	{"twitter.json.gz", 29573},
-	{"code.json.gz", 217707},
+	{"canada.json.gz", 223236, 334373},
+	{"citm_catalog.json.gz", 85035, 135990},
+	{"twitter.json.gz", 29573, 55263},
+	{"code.json.gz", 217707, 396293},
 }
 
 func BenchmarkScanner(b *testing.B) {

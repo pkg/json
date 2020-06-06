@@ -41,7 +41,7 @@ func TestDecoderToken(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.json, func(t *testing.T) {
-			dec := NewDecoder(&SmallReader{strings.NewReader(tc.json)})
+			dec := NewDecoder(&SmallReader{r: strings.NewReader(tc.json)})
 			for n, want := range tc.tokens {
 				got, err := dec.Token()
 				if string(got) != want {
@@ -90,7 +90,7 @@ func TestDecoderInvalidJSON(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.json, func(t *testing.T) {
-			dec := NewDecoder(&SmallReader{strings.NewReader(tc.json)})
+			dec := NewDecoder(&SmallReader{r: strings.NewReader(tc.json)})
 			var err error
 			for {
 				_, err = dec.Token()
