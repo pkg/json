@@ -24,40 +24,11 @@ var whitespace = [256]bool{
 	'\t': true,
 }
 
-type bitvec struct {
-	len int
-	val uint64
-}
-
-func (bv *bitvec) push(v uint64) {
-	bv.len++
-	bv.val <<= 1
-	bv.val |= v
-}
-
-func (bv *bitvec) pop() {
-	bv.len--
-}
-
-func (bv *bitvec) peek() bool {
-	return bv.len > 0 && bv.val&(1<<bv.len) != 0
-}
-
-func WithBuffer(buf []byte) func(*Scanner) {
-	return func(s *Scanner) {
-		s.buf = buf
-	}
-}
-
 // NewScanner returns a new Scanner for the io.Reader r.
-func NewScanner(r io.Reader, opts ...func(*Scanner)) *Scanner {
-	sc := &Scanner{
+func NewScanner(r io.Reader) *Scanner {
+	return &Scanner{
 		r: r,
 	}
-	for _, opt := range opts {
-		opt(sc)
-	}
-	return sc
 }
 
 // Scanner implements a JSON scanner as defined in RFC 7159.
@@ -134,7 +105,6 @@ func (s *Scanner) Next() []byte {
 		if len(expected) > w {
 			// error, cannot be valid json.
 			offset = s.remaining()
-			token = Error
 			return
 		}
 		// can't use std.algorithm.equal here, because of autodecoding...
@@ -142,7 +112,6 @@ func (s *Scanner) Next() []byte {
 			if s.at(s.pos+i) != expected[i] {
 				// doesn't match
 				offset = s.pos + i
-				token = Error
 				return
 			}
 		}
@@ -164,7 +133,6 @@ func (s *Scanner) Next() []byte {
 		// string
 		numChars := s.parseString()
 		if numChars < 2 {
-			token = Error
 			length = s.pos - offset
 		} else {
 			length = numChars
@@ -173,8 +141,7 @@ func (s *Scanner) Next() []byte {
 		// ensure the number is correct.
 		numChars := s.parseNumber()
 		if numChars < 0 {
-			token = Error
-			length = s.pos - offset
+			return nil
 		} else {
 			length = numChars
 		}
@@ -182,15 +149,24 @@ func (s *Scanner) Next() []byte {
 	return s.window()[offset : offset+length]
 }
 
+func isWhitespace(c byte) bool {
+	return whitespace[c]
+}
+
+func isSpace(c byte) bool {
+	return c <= ' ' && (c == ' ' || c == '\t' || c == '\r' || c == '\n')
+}
+
 func (s *Scanner) jsonTok() uint8 {
 	// strip any leading whitespace. If no data is left, we need to extend
 	for {
 		w := s.window()
 		for _, c := range w[s.pos:] {
-			if !whitespace[c] {
-				return c
+			if whitespace[c] {
+				s.pos++
+				continue
 			}
-			s.pos++
+			return c
 		}
 		if s.extend(0) == 0 {
 			return 0

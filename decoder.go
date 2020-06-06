@@ -25,11 +25,44 @@ func NewDecoderBuffer(r io.Reader, buf []byte) *Decoder {
 	}
 }
 
+type bitvec struct {
+	len int
+	val uint64
+}
+
+func (bv *bitvec) push(v uint64) {
+	bv.val |= v << bv.len
+	bv.len++
+}
+
+func (bv *bitvec) pop() bool {
+	v := bv.val&1<<bv.len != 0
+	bv.len--
+	return v
+}
+
+type stack []bool
+
+func (s *stack) push(v bool) {
+	*s = append(*s, v)
+}
+
+func (s *stack) pop() bool {
+	*s = (*s)[:len(*s)-1]
+	if len(*s) == 0 {
+		return false
+	}
+	return (*s)[len(*s)-1]
+}
+
+func (s *stack) len() int { return len(*s) }
+
 // A Decoder decodes JSON values from an input stream.
 type Decoder struct {
 	scanner *Scanner
 	step    func(*Decoder) ([]byte, error)
-	stack   []bool
+	// bitvec
+	stack
 }
 
 // Token returns a []byte referencing the next logical token in the stream.
@@ -57,14 +90,6 @@ func (d *Decoder) Token() ([]byte, error) {
 	return d.step(d)
 }
 
-func (d *Decoder) pop() bool {
-	d.stack = d.stack[:len(d.stack)-1]
-	if len(d.stack) == 0 {
-		return false
-	}
-	return d.stack[len(d.stack)-1]
-}
-
 func stateEnd(d *Decoder) ([]byte, error) {
 	return nil, io.EOF
 }
@@ -72,13 +97,13 @@ func stateEnd(d *Decoder) ([]byte, error) {
 func stateObjectString(d *Decoder) ([]byte, error) {
 	tok := d.scanner.Next()
 	if len(tok) < 1 {
-		return nil, d.scanner.Error()
+		return nil, io.ErrUnexpectedEOF
 	}
 	switch tok[0] {
 	case '}':
 		inObj := d.pop()
 		switch {
-		case len(d.stack) == 0:
+		case d.len() == 0:
 			d.step = stateEnd
 		case inObj:
 			d.step = stateObjectComma
@@ -97,7 +122,7 @@ func stateObjectString(d *Decoder) ([]byte, error) {
 func stateObjectColon(d *Decoder) ([]byte, error) {
 	tok := d.scanner.Next()
 	if len(tok) < 1 {
-		return nil, d.scanner.Error()
+		return nil, io.ErrUnexpectedEOF
 	}
 	switch tok[0] {
 	case Colon:
@@ -111,16 +136,16 @@ func stateObjectColon(d *Decoder) ([]byte, error) {
 func stateObjectValue(d *Decoder) ([]byte, error) {
 	tok := d.scanner.Next()
 	if len(tok) < 1 {
-		return nil, d.scanner.Error()
+		return nil, io.ErrUnexpectedEOF
 	}
 	switch tok[0] {
 	case '{':
 		d.step = stateObjectString
-		d.stack = append(d.stack, true)
+		d.push(true)
 		return tok, nil
 	case '[':
 		d.step = stateArrayValue
-		d.stack = append(d.stack, false)
+		d.push(false)
 		return tok, nil
 	default:
 		d.step = stateObjectComma
@@ -131,14 +156,14 @@ func stateObjectValue(d *Decoder) ([]byte, error) {
 func stateObjectComma(d *Decoder) ([]byte, error) {
 	tok := d.scanner.Next()
 	if len(tok) < 1 {
-		return nil, d.scanner.Error()
+		return nil, io.ErrUnexpectedEOF
 	}
 	switch tok[0] {
 	case '}':
 		inObj := d.pop()
 		switch {
-		case len(d.stack) == 0:
-			d.step = stateValue
+		case d.len() == 0:
+			d.step = stateEnd
 		case inObj:
 			d.step = stateObjectComma
 		case !inObj:
@@ -156,21 +181,21 @@ func stateObjectComma(d *Decoder) ([]byte, error) {
 func stateArrayValue(d *Decoder) ([]byte, error) {
 	tok := d.scanner.Next()
 	if len(tok) < 1 {
-		return nil, d.scanner.Error()
+		return nil, io.ErrUnexpectedEOF
 	}
 	switch tok[0] {
 	case '{':
 		d.step = stateObjectString
-		d.stack = append(d.stack, true)
+		d.push(true)
 		return tok, nil
 	case '[':
 		d.step = stateArrayValue
-		d.stack = append(d.stack, false)
+		d.push(false)
 		return tok, nil
 	case ']':
 		inObj := d.pop()
 		switch {
-		case len(d.stack) == 0:
+		case d.len() == 0:
 			d.step = stateEnd
 		case inObj:
 			d.step = stateObjectComma
@@ -189,13 +214,13 @@ func stateArrayValue(d *Decoder) ([]byte, error) {
 func stateArrayComma(d *Decoder) ([]byte, error) {
 	tok := d.scanner.Next()
 	if len(tok) < 1 {
-		return nil, d.scanner.Error()
+		return nil, io.ErrUnexpectedEOF
 	}
 	switch tok[0] {
 	case ']':
 		inObj := d.pop()
 		switch {
-		case len(d.stack) == 0:
+		case d.len() == 0:
 			d.step = stateEnd
 		case inObj:
 			d.step = stateObjectComma
@@ -207,23 +232,23 @@ func stateArrayComma(d *Decoder) ([]byte, error) {
 		d.step = stateArrayValue
 		return d.Token()
 	default:
-		return nil, fmt.Errorf("stateArrayComma: expected comma")
+		return nil, fmt.Errorf("stateArrayComma: expected comma, %v", d.stack)
 	}
 }
 
 func stateValue(d *Decoder) ([]byte, error) {
 	tok := d.scanner.Next()
 	if len(tok) < 1 {
-		return nil, d.scanner.Error()
+		return nil, io.ErrUnexpectedEOF
 	}
 	switch tok[0] {
 	case '{':
 		d.step = stateObjectString
-		d.stack = append(d.stack, true)
+		d.push(true)
 		return tok, nil
 	case '[':
 		d.step = stateArrayValue
-		d.stack = append(d.stack, false)
+		d.push(false)
 		return tok, nil
 	case ',':
 		return nil, fmt.Errorf("stateValue: unexpected comma")

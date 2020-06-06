@@ -57,36 +57,11 @@ func TestScannerNext(t *testing.T) {
 			if len(last) > 0 {
 				t.Fatalf("expected: %q, got: %q", "", string(last))
 			}
-		})
-	}
-}
-
-func BenchmarkParseString(b *testing.B) {
-	// b.Skip("not working")
-	tests := []string{
-		`""`,
-		`"9999999999999"`,
-	}
-	var buf [4 << 10]byte
-	for _, tc := range tests {
-		b.Run(tc, func(b *testing.B) {
-			b.SetBytes(int64(len(tc)))
-			b.ReportAllocs()
-			for i := 0; i < b.N; i++ {
-				scanner := &Scanner{
-					r: strings.NewReader(tc),
-					buffer: buffer{
-						buf: buf[:],
-					},
-				}
-				n := scanner.parseString()
-				if n != len(tc) {
-					b.Fatalf("failed: expected: %v, got: %v", len(tc), n)
-				}
+			if err := scanner.Error(); err != io.EOF {
+				t.Fatalf("expected: %v, got: %v", io.EOF, err)
 			}
 		})
 	}
-
 }
 
 func BenchmarkParseNumber(b *testing.B) {
@@ -106,13 +81,16 @@ func BenchmarkParseNumber(b *testing.B) {
 		`-1234567.891011121314`,
 	}
 	var buf [4 << 10]byte
+
 	for _, tc := range tests {
+		r := strings.NewReader(tc)
 		b.Run(tc, func(b *testing.B) {
 			b.SetBytes(int64(len(tc)))
 			b.ReportAllocs()
 			for i := 0; i < b.N; i++ {
+				r.Seek(0, 0)
 				scanner := &Scanner{
-					r: strings.NewReader(tc),
+					r: r,
 					buffer: buffer{
 						buf: buf[:],
 					},
