@@ -25,7 +25,10 @@ var inputs = []struct {
 	{"code.json.gz", 217707, 396293},
 
 	// from https://raw.githubusercontent.com/mailru/easyjson/master/benchmark/example.json
-	{"easyjson.json.gz", 710, 1297},
+	{"example.json.gz", 710, 1297},
+
+	// from https://github.com/ultrajson/ultrajson/blob/master/tests/sample.json
+	// {"sample.json.gz", 5276, 1738},
 }
 
 func BenchmarkScanner(b *testing.B) {
