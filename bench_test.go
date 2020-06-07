@@ -23,6 +23,9 @@ var inputs = []struct {
 	{"citm_catalog.json.gz", 85035, 135990},
 	{"twitter.json.gz", 29573, 55263},
 	{"code.json.gz", 217707, 396293},
+
+	// from https://raw.githubusercontent.com/mailru/easyjson/master/benchmark/example.json
+	{"easyjson.json.gz", 710, 1297},
 }
 
 func BenchmarkScanner(b *testing.B) {
