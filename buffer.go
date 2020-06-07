@@ -13,10 +13,6 @@ func (b *buffer) releaseBack(elements int) {
 	b.valid -= elements
 }
 
-func (b *buffer) at(pos int) byte {
-	return b.buf[b.released+pos]
-}
-
 func (b *buffer) window() []byte {
 	return b.buf[b.released:b.valid]
 }
@@ -35,7 +31,7 @@ func (b *buffer) extend(request int) int {
 	if validElems == 0 {
 		b.valid, b.released = b.released, 0
 	}
-	if len(b.buf)-b.valid >= request {
+	if cap(b.buf)-b.valid >= request {
 		// buffer has enough free space to accomodate.
 		b.valid += request
 		return request

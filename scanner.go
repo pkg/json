@@ -35,7 +35,7 @@ func NewScanner(r io.Reader) *Scanner {
 // A Scanner reads from the supplied io.Reader and produces via Next a stream
 // of tokens, expressed as []byte slices.
 type Scanner struct {
-	stack bitvec
+	stack bitvec // unused but the padding is worth up to 3% on the mb/sec
 	pos   int
 	r     io.Reader
 	buffer
@@ -94,7 +94,7 @@ func (s *Scanner) extend(elements int) int {
 //  " A string, possibly containing backslash escaped entites.
 //  -, 0-9 A number
 func (s *Scanner) Next() []byte {
-	s.release() // invalidate previous pos, offset and len
+	s.release() // move the window past the last token, seems to be faster calling this here rather than in s.jsonTok
 	token := s.jsonTok()
 	length := 0
 
@@ -154,19 +154,21 @@ func isSpace(c byte) bool {
 
 func (s *Scanner) jsonTok() uint8 {
 	// strip any leading whitespace. If no data is left, we need to extend
+	w := s.window()
+	pos := 0
 	for {
-		w := s.window()
-		for _, c := range w[s.pos:] {
+		for _, c := range w {
 			if whitespace[c] {
-				s.pos++
+				pos++
 				continue
 			}
-			s.release()
+			s.releaseFront(pos)
 			return c
 		}
 		if s.extend(0) == 0 {
 			return 0
 		}
+		w = s.window()[pos:]
 	}
 }
 
