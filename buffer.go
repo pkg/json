@@ -26,11 +26,12 @@ func (b *buffer) avail() int {
 }
 
 func (b *buffer) remaining() int {
+	// return len(b.window)
 	return b.valid - b.released
 }
 
 func (b *buffer) extend(request int) int {
-	validElems := b.valid - b.released
+	validElems := b.remaining()
 	if validElems == 0 {
 		b.valid, b.released = b.released, 0
 	}
@@ -40,11 +41,10 @@ func (b *buffer) extend(request int) int {
 		return request
 	}
 
-	if len(b.buf)-validElems >= request {
+	if cap(b.buf)-validElems >= request {
 		// buffer has enough space if we move the data to the front.
-		copy(b.buf[0:validElems], b.buf[b.released:b.valid])
+		b.valid = copy(b.buf[0:validElems], b.buf[b.released:b.valid]) + request
 		b.released = 0
-		b.valid = validElems + request
 		return request
 	}
 
@@ -54,12 +54,8 @@ func (b *buffer) extend(request int) int {
 	newLen := max(validElems+request, 8192)
 	newbuf := make([]byte, newLen)
 
-	if validElems > 0 {
-		copy(newbuf[0:validElems], b.buf[b.released:b.valid])
-	}
-	b.valid = validElems + request
+	b.valid = copy(newbuf[0:validElems], b.buf[b.released:b.valid]) + request
 	b.released = 0
-
 	b.buf = newbuf
 
 	return request
