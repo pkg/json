@@ -98,28 +98,27 @@ func (s *Scanner) Next() []byte {
 	token := s.jsonTok()
 	length := 0
 
+	// s.pos will be 0 on return from jsonTok
+
 	validateToken := func(expected string) {
-		s.ensure(s.pos + len(expected))
-		w := s.remaining() + s.pos
-		if len(expected) > w {
+		s.ensure(len(expected))
+		if len(expected) > s.remaining() {
 			// error, cannot be valid json.
 			return
 		}
-		// can't use std.algorithm.equal here, because of autodecoding...
-		for i := 0; i < len(expected); i++ {
-			if s.at(s.pos+i) != expected[i] {
-				// doesn't match
-				return
-			}
+		w := s.window()[:len(expected)]
+		if string(w) != expected {
+			// doesn't match
+			return
 		}
 		length = len(expected)
-		s.pos += len(expected)
+		s.pos = len(expected)
 	}
 
 	switch token {
 	case ObjectStart, ObjectEnd, Colon, Comma, ArrayStart, ArrayEnd:
 		length = 1
-		s.pos++ // skip over the single character item
+		s.pos = 1
 	case True:
 		validateToken("true")
 	case False:
