@@ -100,31 +100,16 @@ func (s *Scanner) Next() []byte {
 
 	// s.pos will be 0 on return from jsonTok
 
-	validateToken := func(expected string) {
-		s.ensure(len(expected))
-		if len(expected) > s.remaining() {
-			// error, cannot be valid json.
-			return
-		}
-		w := s.window()[:len(expected)]
-		if string(w) != expected {
-			// doesn't match
-			return
-		}
-		length = len(expected)
-		s.pos = len(expected)
-	}
-
 	switch token {
 	case ObjectStart, ObjectEnd, Colon, Comma, ArrayStart, ArrayEnd:
 		length = 1
 		s.pos = 1
 	case True:
-		validateToken("true")
+		length = s.validateToken("true")
 	case False:
-		validateToken("false")
+		length = s.validateToken("false")
 	case Null:
-		validateToken("null")
+		length = s.validateToken("null")
 	case String:
 		// string
 		numChars := s.parseString()
@@ -144,12 +129,19 @@ func (s *Scanner) Next() []byte {
 	return s.window()[:length]
 }
 
-func isWhitespace(c byte) bool {
-	return whitespace[c]
-}
-
-func isSpace(c byte) bool {
-	return c <= ' ' && (c == ' ' || c == '\t' || c == '\r' || c == '\n')
+func (s *Scanner) validateToken(expected string) int {
+	s.ensure(len(expected))
+	if len(expected) > s.remaining() {
+		// error, cannot be valid json.
+		return 0
+	}
+	w := s.window()[:len(expected)]
+	if string(w) != expected {
+		// doesn't match
+		return 0
+	}
+	s.pos = len(expected)
+	return len(expected)
 }
 
 func (s *Scanner) jsonTok() uint8 {
