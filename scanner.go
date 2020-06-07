@@ -96,7 +96,6 @@ func (s *Scanner) extend(elements int) int {
 func (s *Scanner) Next() []byte {
 	s.release() // invalidate previous pos, offset and len
 	token := s.jsonTok()
-	offset := s.pos
 	length := 0
 
 	validateToken := func(expected string) {
@@ -104,14 +103,12 @@ func (s *Scanner) Next() []byte {
 		w := s.remaining() + s.pos
 		if len(expected) > w {
 			// error, cannot be valid json.
-			offset = s.remaining()
 			return
 		}
 		// can't use std.algorithm.equal here, because of autodecoding...
 		for i := 0; i < len(expected); i++ {
 			if s.at(s.pos+i) != expected[i] {
 				// doesn't match
-				offset = s.pos + i
 				return
 			}
 		}
@@ -133,20 +130,19 @@ func (s *Scanner) Next() []byte {
 		// string
 		numChars := s.parseString()
 		if numChars < 2 {
-			length = s.pos - offset
-		} else {
-			length = numChars
+			return nil
 		}
+		length = numChars
 	default:
 		// ensure the number is correct.
 		numChars := s.parseNumber()
 		if numChars < 0 {
 			return nil
-		} else {
-			length = numChars
 		}
+		length = numChars
+
 	}
-	return s.window()[offset : offset+length]
+	return s.window()[:length]
 }
 
 func isWhitespace(c byte) bool {
@@ -166,6 +162,7 @@ func (s *Scanner) jsonTok() uint8 {
 				s.pos++
 				continue
 			}
+			s.release()
 			return c
 		}
 		if s.extend(0) == 0 {
