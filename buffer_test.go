@@ -52,4 +52,18 @@ func TestBufferExtend(t *testing.T) {
 	assert(b.avail(), 0)
 	assert(len(b.window()), b.remaining())
 	assert(b.remaining()+b.avail(), cap(b.buf))
+
+	s := b.remaining()
+	b.releaseBack(newBufferSize / 4)
+	assert(b.remaining(), s-(newBufferSize/4))
+	assert(b.avail()-1, newBufferSize-b.remaining())
+	assert(len(b.window()), b.remaining())
+	assert(b.remaining()+b.avail(), cap(b.buf))
+
+	n = b.remaining()
+	n += b.extend(newBufferSize)
+	assert(b.remaining(), n)
+	assert(b.avail(), 0)
+	assert(len(b.window()), b.remaining())
+	assert(b.remaining()+b.avail(), cap(b.buf))
 }

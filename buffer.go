@@ -6,12 +6,12 @@ package json
 // +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
 // | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | a | b | c | d | e | f |
 // +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
-//   ^       ^                       ^                  ^        ^
-//   |       |                       |                  |        |
-//   |       `- buffer.released      `- buffer.valid    |        |
-//   |       |                       |                  |        `- buffer.buf.cap
-//   |       `--- buffer.window() ---+                  |        |
-//   |       `- buffer.remaining() --+                  `- buffer.buf.len
+//   ^       ^                       ^                   ^       ^
+//   |       |                       |                   |       |
+//   |       `- buffer.released      `- buffer.valid     |       |
+//   |       |                       |                   |       `- buffer.buf.cap
+//   |       `--- buffer.window() ---+                   |       |
+//   |       `- buffer.remaining() --+                   `- buffer.buf.len
 //   |                               |                           |
 //   `- buffer.buf                   `- buffer.avail() ----------+
 type buffer struct {
@@ -57,7 +57,7 @@ func (b *buffer) extend(request int) int {
 
 	if cap(b.buf)-b.remaining() >= request {
 		// buffer has enough space if we move the data to the front.
-		b.valid = copy(b.buf[:b.remaining()], b.buf[b.released:b.valid]) + request
+		b.valid = copy(b.buf[:cap(b.buf)], b.buf[b.released:b.valid]) + request
 		b.released = 0
 		return request
 	}
@@ -65,10 +65,9 @@ func (b *buffer) extend(request int) int {
 	// otherwise, we must allocate/extend a new buffer
 	maxBufSize := max(cap(b.buf)*2, newBufferSize)
 	request = min(request, maxBufSize-b.remaining())
-	newLen := max(b.remaining()+request, newBufferSize)
-	newbuf := make([]byte, newLen)
+	newbuf := make([]byte, max(b.remaining()+request, newBufferSize))
 
-	b.valid = copy(b.buf[:b.remaining()], b.buf[b.released:b.valid]) + request
+	b.valid = copy(newbuf, b.buf[b.released:b.valid]) + request
 	b.released = 0
 	b.buf = newbuf
 
