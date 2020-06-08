@@ -210,11 +210,12 @@ func (s *Scanner) parseNumber() int {
 	)
 
 	origPos := s.pos
+	pos := s.pos
 	var state uint16 = begin
+	w := s.window()[pos:]
 	for {
-		w := s.window()
-		for s.pos < len(w) {
-			switch elem := w[s.pos]; state {
+		for _, elem := range w {
+			switch state {
 			case begin:
 				// only accept sign or digit
 				if elem == '-' {
@@ -245,7 +246,8 @@ func (s *Scanner) parseNumber() int {
 				case 'e', 'E':
 					state = exponent
 				default:
-					return s.pos - origPos // finished
+					s.pos = pos
+					return pos - origPos // finished
 				}
 			case decimal:
 				if elem >= '0' && elem <= '9' {
@@ -261,7 +263,8 @@ func (s *Scanner) parseNumber() int {
 				case 'e', 'E':
 					state = exponent
 				default:
-					return s.pos - origPos // finished
+					s.pos = pos
+					return pos - origPos // finished
 				}
 			case exponent:
 				if elem == '+' || elem == '-' {
@@ -279,11 +282,11 @@ func (s *Scanner) parseNumber() int {
 			case anydigit3:
 				if elem >= '0' && elem <= '9' {
 					break
-				} else {
-					return s.pos - origPos // finished
 				}
+				s.pos = pos
+				return pos - origPos // finished
 			}
-			s.pos++
+			pos++
 		}
 
 		// need more data from the pipe
@@ -292,12 +295,14 @@ func (s *Scanner) parseNumber() int {
 			// sure we are in a state that allows ending the number.
 			switch state {
 			case leadingzero, anydigit1, anydigit2, anydigit3:
-				return s.pos - origPos // finished.
+				s.pos = pos
+				return pos - origPos // finished.
 			default:
 				// error otherwise, the number isn't complete.
 				return -1
 			}
 		}
+		w = s.window()[pos:]
 	}
 }
 
