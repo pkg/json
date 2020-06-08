@@ -14,16 +14,16 @@ Honestly, I don't know.
 I have some benchmarks that show that `pkg/json` is faster than `encoding/json` for tokenisation, but this package isn't finished yet.
 
 ```
-BenchmarkDecoder/pkgjson/canada.json.gz-4                           100          11209566 ns/op         200.82 MB/s         152 B/op          3 allocs/op
-BenchmarkDecoder/encodingjson/canada.json.gz-4                       12         101334610 ns/op          22.21 MB/s    17740374 B/op     889106 allocs/op
-BenchmarkDecoder/pkgjson/citm_catalog.json.gz-4                     286           4799249 ns/op         359.89 MB/s         152 B/op          3 allocs/op
-BenchmarkDecoder/encodingjson/citm_catalog.json.gz-4                 43          32148861 ns/op          53.73 MB/s     5665607 B/op     324799 allocs/op
-BenchmarkDecoder/pkgjson/twitter.json.gz-4                          508           2083698 ns/op         303.07 MB/s         168 B/op          4 allocs/op
-BenchmarkDecoder/encodingjson/twitter.json.gz-4                      66          17502857 ns/op          36.08 MB/s     3660253 B/op     187815 allocs/op
-BenchmarkDecoder/pkgjson/code.json.gz-4                             100          10378053 ns/op         186.98 MB/s         264 B/op          6 allocs/op
-BenchmarkDecoder/encodingjson/code.json.gz-4                         10         113882319 ns/op          17.04 MB/s    23355952 B/op    1319126 allocs/op
-BenchmarkDecoder/pkgjson/example.json.gz-4                        27150             43989 ns/op         296.07 MB/s         168 B/op          4 allocs/op
-BenchmarkDecoder/encodingjson/example.json.gz-4                    3105            383158 ns/op          33.99 MB/s       82416 B/op       4325 allocs/op
+BenchmarkDecoder/pkgjson/canada.json.gz-4                    138           8547348 ns/op         263.36 MB/s         152 B/op          3 allocs/op
+BenchmarkDecoder/encodingjson/canada.json.gz-4                12         100103279 ns/op          22.49 MB/s    17740353 B/op     889106 allocs/op
+BenchmarkDecoder/pkgjson/citm_catalog.json.gz-4              313           3805954 ns/op         453.82 MB/s         152 B/op          3 allocs/op
+BenchmarkDecoder/encodingjson/citm_catalog.json.gz-4          40          28544015 ns/op          60.51 MB/s     5665614 B/op     324799 allocs/op
+BenchmarkDecoder/pkgjson/twitter.json.gz-4                   624           1888557 ns/op         334.39 MB/s         168 B/op          4 allocs/op
+BenchmarkDecoder/encodingjson/twitter.json.gz-4               66          17803324 ns/op          35.47 MB/s     3660282 B/op     187815 allocs/op
+BenchmarkDecoder/pkgjson/code.json.gz-4                      126           9443142 ns/op         205.49 MB/s         264 B/op          6 allocs/op
+BenchmarkDecoder/encodingjson/code.json.gz-4                   9         112034109 ns/op          17.32 MB/s    23355939 B/op    1319125 allocs/op
+BenchmarkDecoder/pkgjson/example.json.gz-4                 29368             40249 ns/op         323.58 MB/s         168 B/op          4 allocs/op
+BenchmarkDecoder/encodingjson/example.json.gz-4             3010            396151 ns/op          32.88 MB/s       82416 B/op       4325 allocs/op
 ```
 
 ## Should I use this?
