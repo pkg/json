@@ -2,6 +2,7 @@ package json
 
 import (
 	"io"
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -108,6 +109,69 @@ func TestDecoderInvalidJSON(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestDecoderDecode(t *testing.T) {
+
+	assert := func(v interface{}, want interface{}) {
+		t.Helper()
+		got := reflect.ValueOf(v).Interface()
+		if !reflect.DeepEqual(want, got) {
+			t.Errorf("expected: %v, got: %v", want, got)
+		}
+	}
+
+	decode := func(input string, v interface{}) {
+		dec := NewDecoder(strings.NewReader(input))
+		err := dec.Decode(v)
+		if err != nil {
+			t.Helper()
+			t.Errorf("decode %q: %v", input, err)
+		}
+	}
+
+	var b bool
+	decode("true", &b)
+	assert(b, true)
+
+	decode("false", &b)
+	assert(b, false)
+
+	var bi interface{} = false
+	decode("true", &bi)
+	assert(bi, true)
+
+	decode("false", &bi)
+	assert(bi, false)
+
+	var p = new(int)
+	decode("null", &p)
+	assert(p, (*int)(nil))
+
+	var m = make(map[int]string)
+	decode("null", &m)
+	assert(m, (map[int]string)(nil))
+
+	var sl = []string{"a", "b"}
+	decode("null", &sl)
+	assert(sl, ([]string)(nil))
+
+	var fi interface{}
+	decode("3", &fi)
+	assert(fi, 3.0)
+
+	var f64 float64
+	decode("1", &f64)
+	assert(f64, 1.0)
+
+	var f32 float32
+	decode("1", &f32)
+	assert(f32, float32(1.0))
+
+	return
+	var i int
+	decode("1", &i)
+	assert(i, 1)
 }
 
 /*

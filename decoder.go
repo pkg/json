@@ -1,9 +1,11 @@
-// package json decodes JSON.
+// Package json decodes JSON.
 package json
 
 import (
 	"fmt"
 	"io"
+	"reflect"
+	"strconv"
 )
 
 // NewDecoder returns a new Decoder for the supplied Reader r.
@@ -11,7 +13,7 @@ func NewDecoder(r io.Reader) *Decoder {
 	return NewDecoderBuffer(r, make([]byte, 8192))
 }
 
-// NewDecoder returns a new Decoder for the supplier Reader r, using
+// NewDecoderBuffer returns a new Decoder for the supplier Reader r, using
 // the []byte buf provided for working storage.
 func NewDecoderBuffer(r io.Reader, buf []byte) *Decoder {
 	return &Decoder{
@@ -255,5 +257,79 @@ func stateValue(d *Decoder) ([]byte, error) {
 	default:
 		d.step = stateEnd
 		return tok, nil
+	}
+}
+
+// Decode reads the next JSON-encoded value from its input and stores it
+// in the value pointed to by v.
+func (d *Decoder) Decode(v interface{}) error {
+	rv := reflect.ValueOf(v)
+	switch {
+	case rv.Kind() != reflect.Ptr:
+		return fmt.Errorf("non-pointer %v", reflect.TypeOf(v))
+	case rv.IsNil():
+		return fmt.Errorf("nil")
+	default:
+		return d.decodeValue(rv.Elem())
+	}
+}
+
+func (d *Decoder) decodeValue(v reflect.Value) error {
+	tok := d.scanner.Next()
+	if len(tok) < 1 {
+		return d.scanner.Error()
+	}
+	switch tok[0] {
+	case True, False:
+		value := tok[0] == 't'
+		switch v.Kind() {
+		case reflect.Bool:
+			v.SetBool(value)
+		case reflect.Interface:
+			if v.NumMethod() > 0 {
+				return fmt.Errorf("cannot decode bool into Go value of type %v", v.Type())
+			}
+			v.Set(reflect.ValueOf(value))
+		default:
+			return fmt.Errorf("unhandled type: %v", v.Kind())
+		}
+		return nil
+	case Null:
+		switch v.Kind() {
+		case reflect.Ptr, reflect.Map, reflect.Slice:
+			v.Set(reflect.Zero(v.Type()))
+			return nil
+		default:
+			return fmt.Errorf("unhandled type: %v", v.Kind())
+		}
+	case '-', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
+		switch v.Kind() {
+		case reflect.Interface:
+			if v.NumMethod() > 0 {
+				return fmt.Errorf("cannot decode number into Go value of type %v", v.Type())
+			}
+			f, err := strconv.ParseFloat(string(tok), 64)
+			if err != nil {
+				return fmt.Errorf("cannot convert %q to float: %v", tok, err)
+			}
+			v.Set(reflect.ValueOf(f))
+		case reflect.Float64:
+			f, err := strconv.ParseFloat(string(tok), 64)
+			if err != nil {
+				return fmt.Errorf("cannot convert %q to float: %v", tok, err)
+			}
+			v.Set(reflect.ValueOf(f))
+		case reflect.Float32:
+			f, err := strconv.ParseFloat(string(tok), 64)
+			if err != nil {
+				return fmt.Errorf("cannot convert %q to float: %v", tok, err)
+			}
+			v.Set(reflect.ValueOf(float32(f)))
+		default:
+			return fmt.Errorf("unhandled type: %v", v.Kind())
+		}
+		return nil
+	default:
+		return fmt.Errorf("unhandled token")
 	}
 }

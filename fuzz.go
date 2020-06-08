@@ -7,8 +7,6 @@ import (
 	"io"
 )
 
-var buf [8 << 10]byte
-
 func Fuzz(data []byte) int {
 	sc := NewScanner(bytes.NewReader(data))
 	for {
@@ -21,15 +19,22 @@ func Fuzz(data []byte) int {
 		}
 	}
 
-	dec := NewDecoderBuffer(bytes.NewReader(data), buf[:])
+	dec := NewDecoder(bytes.NewReader(data))
 	for {
 		_, err := dec.Token()
 		if err != nil {
 			if err == io.EOF {
-				return 1
+				break
 			}
 			return -1
 		}
 		return 0
 	}
+	var i interface{}
+	dec = NewDecoder(bytes.NewReader(data))
+	err := dec.Decode(&i)
+	if err != nil {
+		return -1
+	}
+	return 1
 }
