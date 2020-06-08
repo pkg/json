@@ -104,7 +104,7 @@ func BenchmarkParseNumber(b *testing.B) {
 				scanner := &Scanner{
 					r: r,
 					buffer: buffer{
-						buf: buf[:],
+						buf: buf[:0],
 					},
 				}
 				n := scanner.parseNumber()
@@ -130,7 +130,7 @@ func TestScanner(t *testing.T) {
 			sc := &Scanner{
 				r: r,
 				buffer: buffer{
-					buf: _buf[:],
+					buf: _buf[:0],
 				},
 			}
 			n := 0

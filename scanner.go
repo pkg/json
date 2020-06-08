@@ -42,9 +42,10 @@ type Scanner struct {
 	err error
 }
 
+const optimalReadSize = 1024
+
 func (s *Scanner) extend(elements int) int {
 	oldLen := s.remaining()
-	const optimalReadSize = 1024
 
 	if elements == 0 || elements < optimalReadSize && s.avail() == 0 {
 		// optimal read, or first read. Use optimal read size
@@ -54,9 +55,7 @@ func (s *Scanner) extend(elements int) int {
 		// buffer, limit the request to 2x current elements, or optimal
 		// read size, whatever is larger.
 		cap := max(optimalReadSize, oldLen*2)
-		if elements > cap {
-			elements = cap
-		}
+		elements = min(cap, elements)
 	}
 
 	// ensure we maximize buffer use.

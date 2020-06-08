@@ -18,7 +18,7 @@ func NewDecoderBuffer(r io.Reader, buf []byte) *Decoder {
 		scanner: &Scanner{
 			r: r,
 			buffer: buffer{
-				buf: buf,
+				buf: buf[:0],
 			},
 		},
 		step: stateValue,

@@ -52,7 +52,7 @@ func BenchmarkScanner(b *testing.B) {
 				sc := &Scanner{
 					r: r,
 					buffer: buffer{
-						buf: _buf[:],
+						buf: _buf[:0],
 					},
 				}
 				for len(sc.Next()) > 0 {
