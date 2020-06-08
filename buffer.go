@@ -1,5 +1,19 @@
 package json
 
+// buffer implements Steven Schveighoffer's iopipe buffered window.
+// A buffer window is a sliding window over a []byte slice.
+//
+// +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
+// | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | a | b | c | d | e | f |
+// +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
+//   ^       ^                       ^                  ^        ^
+//   |       |                       |                  |        |
+//   |       `- buffer.released      `- buffer.valid    |        |
+//   |       |                       |                  |        `- buffer.buf.cap
+//   |       `--- buffer.window() ---+                  |        |
+//   |       `- buffer.remaining() --+                  `- buffer.buf.len
+//   |                               |                           |
+//   `- buffer.buf                   `- buffer.avail() ----------+
 type buffer struct {
 	buf             []byte
 	released, valid int
@@ -18,7 +32,7 @@ func (b *buffer) window() []byte {
 }
 
 func (b *buffer) avail() int {
-	return len(b.buf) - b.remaining()
+	return cap(b.buf) - b.remaining()
 }
 
 func (b *buffer) remaining() int {
@@ -26,10 +40,14 @@ func (b *buffer) remaining() int {
 	return b.valid - b.released
 }
 
+// tuning constants for buffer.extend.
+const (
+	newBufferSize = 8192
+)
+
 func (b *buffer) extend(request int) int {
-	validElems := b.remaining()
-	if validElems == 0 {
-		b.valid, b.released = b.released, 0
+	if b.remaining() == 0 {
+		b.valid, b.released = 0, 0
 	}
 	if cap(b.buf)-b.valid >= request {
 		// buffer has enough free space to accomodate.
@@ -37,20 +55,20 @@ func (b *buffer) extend(request int) int {
 		return request
 	}
 
-	if cap(b.buf)-validElems >= request {
+	if cap(b.buf)-b.remaining() >= request {
 		// buffer has enough space if we move the data to the front.
-		b.valid = copy(b.buf[0:validElems], b.buf[b.released:b.valid]) + request
+		b.valid = copy(b.buf[:b.remaining()], b.buf[b.released:b.valid]) + request
 		b.released = 0
 		return request
 	}
 
 	// otherwise, we must allocate/extend a new buffer
-	maxBufSize := max(len(b.buf)*2, 8192)
-	request = min(request, maxBufSize-validElems)
-	newLen := max(validElems+request, 8192)
+	maxBufSize := max(cap(b.buf)*2, newBufferSize)
+	request = min(request, maxBufSize-b.remaining())
+	newLen := max(b.remaining()+request, newBufferSize)
 	newbuf := make([]byte, newLen)
 
-	b.valid = copy(newbuf[0:validElems], b.buf[b.released:b.valid]) + request
+	b.valid = copy(b.buf[:b.remaining()], b.buf[b.released:b.valid]) + request
 	b.released = 0
 	b.buf = newbuf
 
