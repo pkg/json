@@ -31,7 +31,9 @@ func TestScannerNext(t *testing.T) {
 		in     string
 		tokens []string
 	}{
+		{in: `""`, tokens: []string{`""`}},
 		{in: `"a"`, tokens: []string{`"a"`}},
+		{in: ` "a" `, tokens: []string{`"a"`}},
 		{in: `"\""`, tokens: []string{`"\""`}},
 		{in: `1`, tokens: []string{`1`}},
 		{in: `{}`, tokens: []string{`{`, `}`}},
@@ -40,7 +42,6 @@ func TestScannerNext(t *testing.T) {
 		{in: `{"a": 0}`, tokens: []string{`{`, `"a"`, `:`, `0`, `}`}},
 		{in: `{"a": []}`, tokens: []string{`{`, `"a"`, `:`, `[`, `]`, `}`}},
 		{in: `[10]`, tokens: []string{`[`, `10`, `]`}},
-		{in: `""`, tokens: []string{`""`}},
 		{in: `[{"a": 1,"b": 123.456, "c": null, "d": [1, -2, "three", true, false, ""]}]`,
 			tokens: []string{`[`,
 				`{`,

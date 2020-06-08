@@ -170,34 +170,29 @@ func (s *Scanner) release() {
 
 func (s *Scanner) parseString() int {
 	start := s.pos
-	s.pos++
+	pos := start + 1
 	escaped := false
+	w := s.window()[pos:]
 	for {
-		w := s.window()
-		for _, c := range w[s.pos:] {
-			if c == '\\' {
-				s.pos++
+		for _, c := range w {
+			pos++
+			switch {
+			case c == '\\':
 				escaped = true
-				continue
-			}
-			if escaped {
+			case escaped:
 				escaped = false
-				s.pos++
-				continue
-			}
-
-			if c == '"' && !escaped {
+			case c == '"' && !escaped:
 				// finished
-				s.pos++
-				return s.pos - start
+				s.pos = pos
+				return pos - start
 			}
-			s.pos++
 		}
 		// need more data from the pipe
 		if s.extend(0) == 0 {
 			// EOF.
 			return -1
 		}
+		w = s.window()[pos:]
 	}
 }
 
