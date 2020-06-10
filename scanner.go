@@ -93,39 +93,53 @@ func (s *Scanner) extend(elements int) int {
 //  " A string, possibly containing backslash escaped entites.
 //  -, 0-9 A number
 func (s *Scanner) Next() []byte {
-	s.release() // move the window past the last token, seems to be faster calling this here rather than in s.jsonTok
-	token := s.jsonTok()
-	length := 0
+	s.release() // move the window past the last token
+	w := s.window()
+	pos := 0
+	for {
+		for _, c := range w {
+			// strip any leading whitespace.
+			if whitespace[c] {
+				pos++
+				continue
+			}
+			length := 0
+			s.releaseFront(pos)
+			switch c {
+			case ObjectStart, ObjectEnd, Colon, Comma, ArrayStart, ArrayEnd:
+				length = 1
+				s.pos = 1
+			case True:
+				length = s.validateToken("true")
+			case False:
+				length = s.validateToken("false")
+			case Null:
+				length = s.validateToken("null")
+			case String:
+				// string
+				numChars := s.parseString()
+				if numChars < 2 {
+					return nil
+				}
+				length = numChars
+			default:
+				// ensure the number is correct.
+				numChars := s.parseNumber()
+				if numChars < 0 {
+					return nil
+				}
+				length = numChars
 
-	// s.pos will be 0 on return from jsonTok
-
-	switch token {
-	case ObjectStart, ObjectEnd, Colon, Comma, ArrayStart, ArrayEnd:
-		length = 1
-		s.pos = 1
-	case True:
-		length = s.validateToken("true")
-	case False:
-		length = s.validateToken("false")
-	case Null:
-		length = s.validateToken("null")
-	case String:
-		// string
-		numChars := s.parseString()
-		if numChars < 2 {
+			}
+			return s.window()[:length]
+		}
+		// If no data is left, we need to extend
+		if s.extend(0) == 0 {
+			// eof
 			return nil
 		}
-		length = numChars
-	default:
-		// ensure the number is correct.
-		numChars := s.parseNumber()
-		if numChars < 0 {
-			return nil
-		}
-		length = numChars
-
+		w = s.window()[pos:]
 	}
-	return s.window()[:length]
 }
 
 func (s *Scanner) validateToken(expected string) int {
@@ -141,26 +155,6 @@ func (s *Scanner) validateToken(expected string) int {
 	}
 	s.pos = len(expected)
 	return len(expected)
-}
-
-func (s *Scanner) jsonTok() uint8 {
-	// strip any leading whitespace. If no data is left, we need to extend
-	w := s.window()
-	pos := 0
-	for {
-		for _, c := range w {
-			if whitespace[c] {
-				pos++
-				continue
-			}
-			s.releaseFront(pos)
-			return c
-		}
-		if s.extend(0) == 0 {
-			return 0
-		}
-		w = s.window()[pos:]
-	}
 }
 
 func (s *Scanner) release() {
