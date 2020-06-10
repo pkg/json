@@ -93,7 +93,7 @@ func (s *Scanner) extend(elements int) int {
 //  " A string, possibly containing backslash escaped entites.
 //  -, 0-9 A number
 func (s *Scanner) Next() []byte {
-	s.release() // move the window past the last token
+	s.releaseFront(s.pos)
 	w := s.window()
 	pos := 0
 	for {
@@ -157,14 +157,8 @@ func (s *Scanner) validateToken(expected string) int {
 	return len(expected)
 }
 
-func (s *Scanner) release() {
-	s.releaseFront(s.pos)
-	s.pos = 0
-}
-
 func (s *Scanner) parseString() int {
-	start := s.pos
-	pos := start + 1
+	pos := 1
 	escaped := false
 	w := s.window()[pos:]
 	for {
@@ -178,7 +172,7 @@ func (s *Scanner) parseString() int {
 			case c == '"' && !escaped:
 				// finished
 				s.pos = pos
-				return pos - start
+				return pos
 			}
 		}
 		// need more data from the pipe
@@ -203,8 +197,7 @@ func (s *Scanner) parseNumber() int {
 		anydigit3
 	)
 
-	origPos := s.pos
-	pos := s.pos
+	pos := 0
 	var state uint16 = begin
 	w := s.window()[pos:]
 	for {
@@ -241,7 +234,7 @@ func (s *Scanner) parseNumber() int {
 					state = exponent
 				default:
 					s.pos = pos
-					return pos - origPos // finished
+					return pos // finished
 				}
 			case decimal:
 				if elem >= '0' && elem <= '9' {
@@ -258,7 +251,7 @@ func (s *Scanner) parseNumber() int {
 					state = exponent
 				default:
 					s.pos = pos
-					return pos - origPos // finished
+					return pos // finished
 				}
 			case exponent:
 				if elem == '+' || elem == '-' {
@@ -278,7 +271,7 @@ func (s *Scanner) parseNumber() int {
 					break
 				}
 				s.pos = pos
-				return pos - origPos // finished
+				return pos // finished
 			}
 			pos++
 		}
@@ -290,7 +283,7 @@ func (s *Scanner) parseNumber() int {
 			switch state {
 			case leadingzero, anydigit1, anydigit2, anydigit3:
 				s.pos = pos
-				return pos - origPos // finished.
+				return pos // finished.
 			default:
 				// error otherwise, the number isn't complete.
 				return -1
