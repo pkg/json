@@ -55,6 +55,9 @@ func TestScannerNext(t *testing.T) {
 				`]`,
 			},
 		},
+		{in: `{"x": "va\\\\ue", "y": "value y"}`, tokens: []string{
+			`{`, `"x"`, `:`, `"va\\\\ue"`, `,`, `"y"`, `:`, `"value y"`, `}`,
+		}},
 	}
 
 	for _, tc := range tests {
