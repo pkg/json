@@ -80,6 +80,74 @@ func TestScannerNext(t *testing.T) {
 	}
 }
 
+func TestParseString(t *testing.T) {
+	tests := []struct {
+		json string
+		want string
+	}{
+		{`""`, `""`},
+		{`"" `, `""`},
+		{`"\""`, `"\""`},
+		{`"\\\\\\\\\6"`, `"\\\\\\\\\6"`},
+		{`"\6"`, `"\6"`},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.json, func(t *testing.T) {
+			r := strings.NewReader(tc.json)
+			scanner := &Scanner{
+				r: r,
+			}
+			scanner.extend(0) // consume reader
+			n := scanner.parseString()
+			if n != len(tc.want) {
+				t.Fatalf("expected: %v, got: %v", len(tc.want), n)
+			}
+			got := scanner.buffer.window()[:n]
+			if string(got) != tc.want {
+				t.Fatalf("expected: %q, got: %q", tc.want, got)
+			}
+		})
+	}
+}
+
+func TestParseNumber(t *testing.T) {
+	tests := []string{
+		`1`,
+		// `00`,
+		`12.0004`,
+		`1.7734`,
+		`15`,
+		`-42`,
+		`-1.7734`,
+		`1.0e+28`,
+		`-1.0e+28`,
+		`1.0e-28`,
+		`-1.0e-28`,
+		`-18.3872`,
+		`-2.1`,
+		`-1234567.891011121314`,
+	}
+
+	for _, tc := range tests {
+		t.Run(tc, func(t *testing.T) {
+			r := strings.NewReader(tc)
+			scanner := &Scanner{
+				r: r,
+			}
+			scanner.extend(0) // consume reader
+			n := scanner.parseNumber()
+			if n != len(tc) {
+				t.Fatalf("expected: %v, got: %v", len(tc), n)
+			}
+			got := scanner.buffer.window()[:n]
+			if string(got) != tc {
+				t.Fatalf("expected: %q, got: %q", tc, got)
+			}
+		})
+	}
+}
+
 func BenchmarkParseNumber(b *testing.B) {
 	tests := []string{
 		`1`,

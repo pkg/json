@@ -28,7 +28,7 @@ var inputs = []struct {
 	{"example.json.gz", 710, 1297},
 
 	// from https://github.com/ultrajson/ultrajson/blob/master/tests/sample.json
-	// {"sample.json.gz", 5276, 1738},
+	{"sample.json.gz", 5276, 8677},
 }
 
 func BenchmarkScanner(b *testing.B) {

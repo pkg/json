@@ -71,7 +71,7 @@ func TestDecoderInvalidJSON(t *testing.T) {
 		{json: `{"":` + "\n" + `}`},
 		{json: `{{"key": 1}: 2}}`},
 		{json: `{1: 1}`},
-		// {json: `"\\\\\\\\\6"`},
+		// {json: `"\6"`},
 		{json: `[[],[], [[]],�[[]]]`},
 		{json: `+`},
 		{json: `,`},
@@ -86,6 +86,11 @@ func TestDecoderInvalidJSON(t *testing.T) {
 		{json: `--123`},
 		{json: `.1`},
 		{json: `0.1e`},
+		// fuzz testing
+		// {json: "\"\x00outC: .| >\x185\x014\x80\x00\x01n" +
+		//	"E4255425067\x014\x80\x00\x01.242" +
+		//	"55425.E420679586036\xef" +
+		//	"\xbf9586036�\""},
 	}
 
 	for _, tc := range tests {
