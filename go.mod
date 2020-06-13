@@ -7,4 +7,5 @@ require (
 	github.com/elazarl/go-bindata-assetfs v1.0.0 // indirect
 	github.com/stephens2424/writerset v1.0.2 // indirect
 	golang.org/x/tools v0.0.0-20200606014950-c42cb6316fb6 // indirect
+	honnef.co/go/tools v0.0.1-2020.1.4 // indirect
 )

@@ -6,6 +6,7 @@ import (
 	"io"
 	"reflect"
 	"strconv"
+	"unsafe"
 )
 
 // NewDecoder returns a new Decoder for the supplied Reader r.
@@ -338,25 +339,25 @@ func (d *Decoder) decodeValue(v reflect.Value) error {
 			if v.NumMethod() > 0 {
 				return fmt.Errorf("cannot decode number into Go value of type %v", v.Type())
 			}
-			f, err := strconv.ParseFloat(string(tok), 64)
+			f, err := strconv.ParseFloat(bytesToString(tok), 64)
 			if err != nil {
 				return fmt.Errorf("cannot convert %q to float: %v", tok, err)
 			}
 			v.Set(reflect.ValueOf(f))
 		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-			i, err := strconv.ParseInt(string(tok), 10, 64)
+			i, err := strconv.ParseInt(bytesToString(tok), 10, 64)
 			if err != nil || v.OverflowInt(i) {
 				return fmt.Errorf("cannot convert %q to int: %v", tok, err)
 			}
 			v.SetInt(i)
 		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-			u, err := strconv.ParseUint(string(tok), 10, 64)
+			u, err := strconv.ParseUint(bytesToString(tok), 10, 64)
 			if err != nil || v.OverflowUint(u) {
 				return fmt.Errorf("cannot convert %q to uint: %v", tok, err)
 			}
 			v.SetUint(u)
 		case reflect.Float64, reflect.Float32:
-			f, err := strconv.ParseFloat(string(tok), v.Type().Bits())
+			f, err := strconv.ParseFloat(bytesToString(tok), v.Type().Bits())
 			if err != nil || v.OverflowFloat(f) {
 				return fmt.Errorf("cannot convert %q to float: %v", tok, err)
 			}
@@ -387,7 +388,7 @@ func (d *Decoder) decodeValueAny() (interface{}, error) {
 	case Null:
 		return nil, nil
 	case '-', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
-		return strconv.ParseFloat(string(tok), 64)
+		return strconv.ParseFloat(bytesToString(tok), 64)
 	default:
 		return fmt.Errorf("decodeValueAny: unhandled token: %c", tok[0]), nil
 	}
@@ -440,7 +441,7 @@ func (d *Decoder) decodeSliceAny() ([]interface{}, error) {
 		case Null:
 			s = append(s, nil)
 		case '-', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
-			f, err := strconv.ParseFloat(string(tok), 64)
+			f, err := strconv.ParseFloat(bytesToString(tok), 64)
 			if err != nil {
 				return nil, fmt.Errorf("cannot convert %q to float: %v", tok, err)
 			}
@@ -485,4 +486,10 @@ func (d *Decoder) decodeObjectKey(v reflect.Value) error {
 			return fmt.Errorf("unhandled token: %c", tok[0])
 		}
 	}
+}
+
+func bytesToString(b []byte) string {
+	sliceHeader := (*reflect.SliceHeader)(unsafe.Pointer(&b))
+	stringHeader := reflect.StringHeader{Data: sliceHeader.Data, Len: sliceHeader.Len}
+	return *(*string)(unsafe.Pointer(&stringHeader))
 }
