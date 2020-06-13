@@ -168,10 +168,39 @@ func TestDecoderDecode(t *testing.T) {
 	decode("1", &f32)
 	assert(f32, float32(1.0))
 
-	return
 	var i int
 	decode("1", &i)
 	assert(i, 1)
+
+	var i64 int64
+	decode("-1", &i64)
+	assert(i64, int64(-1))
+
+	var u uint
+	decode("1", &u)
+	assert(u, uint(1))
+
+	var any interface{}
+	decode("{}", &any)
+	assert(any, map[string]interface{}{})
+
+	decode(`{"a": 1, "b": {"c": 2}}`, &any)
+	assert(any, map[string]interface{}{
+		"a": float64(1),
+		"b": map[string]interface{}{
+			"c": float64(2),
+		},
+	})
+
+	decode(`[{"a": [{}]}]`, &any)
+	assert(any, []interface{}{
+		map[string]interface{}{
+			"a": []interface{}{
+				map[string]interface{}{},
+			},
+		},
+	})
+
 }
 
 /*
