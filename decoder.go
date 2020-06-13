@@ -2,6 +2,7 @@
 package json
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"reflect"
@@ -68,9 +69,43 @@ type Decoder struct {
 	stack
 }
 
-// Token returns a []byte referencing the next logical token in the stream.
+// Token returns the next JSON token in the input stream.
+// At the end of the input stream, Token returns nil, io.EOF.
+//
+// Token guarantees that the delimiters [ ] { } it returns are
+// properly nested and matched: if Token encounters an unexpected
+// delimiter in the input, it will return an error.
+//
+// The input stream consists of basic JSON values—bool, string,
+// number, and null—along with delimiters [ ] { } of type json.Delim
+// to mark the start and end of arrays and objects.
+// Commas and colons are elided.
+//
+// Note: this API is provided for compatability with the encoding/json
+// package and carries a significant allocation cost. See NextToken for
+// a more efficient API.
+func (d *Decoder) Token() (json.Token, error) {
+	tok, err := d.NextToken()
+	if err != nil {
+		return nil, err
+	}
+	switch tok[0] {
+	case '{', '[', ']', '}':
+		return json.Delim(tok[0]), nil
+	case 't', 'f':
+		return tok[0] == 't', nil
+	case 'n':
+		return nil, nil
+	case '"':
+		return string(tok[1 : len(tok)-1]), nil
+	default:
+		return strconv.ParseFloat(string(tok), 64)
+	}
+}
+
+// NextToken returns a []byte referencing the next logical token in the stream.
 // The []byte is valid until Token is called again.
-// Ad the end of the input stream, Token returns nil, io.EOF.
+// At the end of the input stream, Token returns nil, io.EOF.
 //
 // Token guarantees that the delimiters [ ] { } it returns are properly nested
 // and matched: if Token encounters an unexpected delimiter in the input, it
@@ -89,7 +124,7 @@ type Decoder struct {
 //    -, 0-9 A number
 //
 // Commas and colons are elided.
-func (d *Decoder) Token() ([]byte, error) {
+func (d *Decoder) NextToken() ([]byte, error) {
 	return d.step(d)
 }
 
@@ -130,7 +165,7 @@ func stateObjectColon(d *Decoder) ([]byte, error) {
 	switch tok[0] {
 	case Colon:
 		d.step = stateObjectValue
-		return d.Token()
+		return d.NextToken()
 	default:
 		return tok, fmt.Errorf("stateObjectColon: expecting colon")
 	}
@@ -175,7 +210,7 @@ func stateObjectComma(d *Decoder) ([]byte, error) {
 		return tok, nil
 	case Comma:
 		d.step = stateObjectString
-		return d.Token()
+		return d.NextToken()
 	default:
 		return tok, fmt.Errorf("stateObjectComma: expecting comma")
 	}
@@ -233,7 +268,7 @@ func stateArrayComma(d *Decoder) ([]byte, error) {
 		return tok, nil
 	case Comma:
 		d.step = stateArrayValue
-		return d.Token()
+		return d.NextToken()
 	default:
 		return nil, fmt.Errorf("stateArrayComma: expected comma, %v", d.stack)
 	}
@@ -276,7 +311,7 @@ func (d *Decoder) Decode(v interface{}) error {
 }
 
 func (d *Decoder) decodeValue(v reflect.Value) error {
-	tok, err := d.Token()
+	tok, err := d.NextToken()
 	if err != nil {
 		return err
 	}
@@ -389,7 +424,7 @@ func (d *Decoder) decodeValue(v reflect.Value) error {
 }
 
 func (d *Decoder) decodeValueAny() (interface{}, error) {
-	tok, err := d.Token()
+	tok, err := d.NextToken()
 	if err != nil {
 		return nil, err
 	}
@@ -415,7 +450,7 @@ func (d *Decoder) decodeValueAny() (interface{}, error) {
 func (d *Decoder) decodeMapAny() (map[string]interface{}, error) {
 	m := make(map[string]interface{})
 	for {
-		tok, err := d.Token()
+		tok, err := d.NextToken()
 		if err != nil {
 			return nil, err
 		}
@@ -440,7 +475,7 @@ func (d *Decoder) decodeMap(v reflect.Value) error {
 	}
 
 	for {
-		tok, err := d.Token()
+		tok, err := d.NextToken()
 		if err != nil {
 			return err
 		}
@@ -461,7 +496,7 @@ func (d *Decoder) decodeMap(v reflect.Value) error {
 func (d *Decoder) decodeSliceAny() ([]interface{}, error) {
 	s := make([]interface{}, 0, 1)
 	for {
-		tok, err := d.Token()
+		tok, err := d.NextToken()
 		if err != nil {
 			return nil, err
 		}
@@ -499,7 +534,7 @@ func (d *Decoder) decodeSliceAny() ([]interface{}, error) {
 
 func (d *Decoder) decodeObjectKey(v reflect.Value) error {
 	for {
-		tok, err := d.Token()
+		tok, err := d.NextToken()
 		if err != nil {
 			return err
 		}

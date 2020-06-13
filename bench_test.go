@@ -162,7 +162,6 @@ func BenchmarkDecoderToken(b *testing.B) {
 						break
 					}
 					check(b, err)
-					//b.Logf("n: %v, token: %q", n, tok)
 					n++
 				}
 				if n != tc.tokens {
@@ -195,27 +194,35 @@ func BenchmarkDecoderToken(b *testing.B) {
 	}
 }
 
-func BenchmarkUnbufferedDecoderToken(b *testing.B) {
+func BenchmarkDecoderNextToken(b *testing.B) {
 	for _, tc := range inputs {
+
+		f, err := os.Open(filepath.Join("testdata", tc.path))
+		check(b, err)
+		defer f.Close()
+		gz, err := gzip.NewReader(f)
+		check(b, err)
+		buf, err := ioutil.ReadAll(gz)
+		check(b, err)
+
+		r := bytes.NewReader(buf)
+
 		b.Run("pkgjson/"+tc.path, func(b *testing.B) {
 			b.ReportAllocs()
+			b.SetBytes(int64(len(buf)))
+			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
-				f, err := os.Open(filepath.Join("testdata", tc.path))
-				check(b, err)
-				gz, err := gzip.NewReader(f)
-				check(b, err)
-				dec := NewDecoderBuffer(gz, _buf[:])
+				r.Seek(0, 0)
+				dec := NewDecoderBuffer(r, _buf[:])
 				n := 0
 				for {
-					_, err := dec.Token()
+					_, err := dec.NextToken()
 					if err == io.EOF {
 						break
 					}
 					check(b, err)
-					//b.Logf("n: %v, token: %q", n, tok)
 					n++
 				}
-				f.Close()
 				if n != tc.tokens {
 					b.Fatalf("expected %v tokens, got %v", tc.tokens, n)
 				}
@@ -223,12 +230,12 @@ func BenchmarkUnbufferedDecoderToken(b *testing.B) {
 		})
 
 		b.Run("encodingjson/"+tc.path, func(b *testing.B) {
+			b.ReportAllocs()
+			b.SetBytes(int64(len(buf)))
+			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
-				f, err := os.Open(filepath.Join("testdata", tc.path))
-				check(b, err)
-				gz, err := gzip.NewReader(f)
-				check(b, err)
-				dec := json.NewDecoder(gz)
+				r.Seek(0, 0)
+				dec := json.NewDecoder(r)
 				n := 0
 				for {
 					_, err := dec.Token()
@@ -238,7 +245,6 @@ func BenchmarkUnbufferedDecoderToken(b *testing.B) {
 					check(b, err)
 					n++
 				}
-				f.Close()
 				if n != tc.tokens {
 					b.Fatalf("expected %v tokens, got %v", tc.tokens, n)
 				}

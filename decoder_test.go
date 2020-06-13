@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func TestDecoderToken(t *testing.T) {
+func TestDecoderNextToken(t *testing.T) {
 	tests := []struct {
 		json   string
 		tokens []string
@@ -44,13 +44,13 @@ func TestDecoderToken(t *testing.T) {
 		t.Run(tc.json, func(t *testing.T) {
 			dec := NewDecoder(&SmallReader{r: strings.NewReader(tc.json)})
 			for n, want := range tc.tokens {
-				got, err := dec.Token()
+				got, err := dec.NextToken()
 				if string(got) != want {
 					t.Fatalf("%v: expected: %q, got: %q, %v", n+1, want, string(got), err)
 				}
 				t.Logf("token: %q, stack: %v", got, dec.stack)
 			}
-			last, err := dec.Token()
+			last, err := dec.NextToken()
 			if len(last) > 0 {
 				t.Fatalf("expected: %q, got: %q, %v", "", string(last), err)
 			}

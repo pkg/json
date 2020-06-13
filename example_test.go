@@ -52,6 +52,33 @@ func ExampleDecoder_Token() {
 		if err != nil {
 			log.Fatal(err)
 		}
+		fmt.Printf("%v\n", tok)
+	}
+
+	// Output:
+	// {
+	// a
+	// 1
+	// b
+	// 123.456
+	// c
+	// [
+	// <nil>
+	// ]
+	// }
+}
+
+func ExampleDecoder_NextToken() {
+	input := `{"a": 1,"b": 123.456, "c": [null]}`
+	dec := json.NewDecoder(strings.NewReader(input))
+	for {
+		tok, err := dec.NextToken()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			log.Fatal(err)
+		}
 		fmt.Printf("%s\n", tok)
 	}
 
@@ -67,7 +94,6 @@ func ExampleDecoder_Token() {
 	// ]
 	// }
 }
-
 func ExampleDecoder_Decode() {
 	input := `{"a": 1,"b": 123.456, "c": [null]}`
 	dec := json.NewDecoder(strings.NewReader(input))
