@@ -104,7 +104,7 @@ func BenchmarkDecoderDecodeInterfaceAny(b *testing.B) {
 	}
 }
 
-func BenchmarkDecoder(b *testing.B) {
+func BenchmarkDecoderToken(b *testing.B) {
 	for _, tc := range inputs {
 
 		f, err := os.Open(filepath.Join("testdata", tc.path))
@@ -164,7 +164,7 @@ func BenchmarkDecoder(b *testing.B) {
 	}
 }
 
-func BenchmarkUnbufferedDecoder(b *testing.B) {
+func BenchmarkUnbufferedDecoderToken(b *testing.B) {
 	for _, tc := range inputs {
 		b.Run("pkgjson/"+tc.path, func(b *testing.B) {
 			b.ReportAllocs()
