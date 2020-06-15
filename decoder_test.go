@@ -201,21 +201,21 @@ func TestDecoderDecode(t *testing.T) {
 		},
 	})
 
-}
+	ms := make(map[string]string)
+	decode(`{"hello": "world"}`, &ms)
+	assert(ms, map[string]string{
+		"hello": "world",
+	})
 
-/*
-func TestBitvecPushPop(t *testing.T) {
-	var bv bitvec
-	for i := 0; i < len(bv.val); i++ {
-		v := uint64(i) % 1
-		for j := 0; j < i; j++ {
-			bv.push(v)
-		}
-		for j := 0; j < i; j++ {
-			if got := bv.pop(); got != (v == 1) {
-				t.Fatalf("depth %v: expected: %v, got: %v", j, v, got)
-			}
-		}
-	}
+	mi := make(map[string]interface{})
+	decode(`{"a": 1, "b": false, "c":[1, 2.0, "three"]}`, &mi)
+	assert(mi, map[string]interface{}{
+		"a": float64(1),
+		"b": false,
+		"c": []interface{}{
+			float64(1),
+			2.0,
+			"three",
+		},
+	})
 }
-*/

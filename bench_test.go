@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -102,6 +103,36 @@ func BenchmarkDecoderDecodeInterfaceAny(b *testing.B) {
 			}
 		})
 	}
+}
+
+func BenchmarkDecoderDecodeMapInt(b *testing.B) {
+	in := `{"a": 97, "b": 98, "c": 99, "d": 100, "e": 101, "f": 102, "g": 103 }`
+	r := strings.NewReader(in)
+	b.Run("pkgjson", func(b *testing.B) {
+		b.ReportAllocs()
+		b.SetBytes(int64(len(in)))
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			r.Seek(0, 0)
+			dec := NewDecoderBuffer(r, _buf[:])
+			m := make(map[string]int)
+			err := dec.Decode(&m)
+			check(b, err)
+		}
+	})
+
+	b.Run("encodingjson", func(b *testing.B) {
+		b.ReportAllocs()
+		b.SetBytes(int64(len(in)))
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			r.Seek(0, 0)
+			dec := json.NewDecoder(r)
+			m := make(map[string]int)
+			err := dec.Decode(&m)
+			check(b, err)
+		}
+	})
 }
 
 func BenchmarkDecoderToken(b *testing.B) {
