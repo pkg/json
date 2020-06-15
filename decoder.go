@@ -1,9 +1,12 @@
-// package json decodes JSON.
+// Package json decodes JSON.
 package json
 
 import (
 	"fmt"
 	"io"
+	"reflect"
+	"strconv"
+	"unsafe"
 )
 
 // NewDecoder returns a new Decoder for the supplied Reader r.
@@ -11,7 +14,7 @@ func NewDecoder(r io.Reader) *Decoder {
 	return NewDecoderBuffer(r, make([]byte, 8192))
 }
 
-// NewDecoder returns a new Decoder for the supplier Reader r, using
+// NewDecoderBuffer returns a new Decoder for the supplier Reader r, using
 // the []byte buf provided for working storage.
 func NewDecoderBuffer(r io.Reader, buf []byte) *Decoder {
 	return &Decoder{
@@ -256,4 +259,237 @@ func stateValue(d *Decoder) ([]byte, error) {
 		d.step = stateEnd
 		return tok, nil
 	}
+}
+
+// Decode reads the next JSON-encoded value from its input and stores it
+// in the value pointed to by v.
+func (d *Decoder) Decode(v interface{}) error {
+	rv := reflect.ValueOf(v)
+	switch {
+	case rv.Kind() != reflect.Ptr:
+		return fmt.Errorf("non-pointer %v", reflect.TypeOf(v))
+	case rv.IsNil():
+		return fmt.Errorf("nil")
+	default:
+		return d.decodeValue(rv.Elem())
+	}
+}
+
+func (d *Decoder) decodeValue(v reflect.Value) error {
+	tok, err := d.Token()
+	if err != nil {
+		return err
+	}
+	switch tok[0] {
+	case '{':
+		switch v.Kind() {
+		case reflect.Interface:
+			if v.NumMethod() > 0 {
+				return fmt.Errorf("cannot decode object into Go value of type %v", v.Type())
+			}
+			m, err := d.decodeMapAny()
+			if err != nil {
+				return err
+			}
+			v.Set(reflect.ValueOf(m))
+		default:
+			return fmt.Errorf("unhandled type: %v", v.Kind())
+		}
+		return nil
+	case '[':
+		switch v.Kind() {
+		case reflect.Interface:
+			if v.NumMethod() > 0 {
+				return fmt.Errorf("cannot decode array into Go value of type %v", v.Type())
+			}
+			s, err := d.decodeSliceAny()
+			if err != nil {
+				return err
+			}
+			v.Set(reflect.ValueOf(s))
+		default:
+			return fmt.Errorf("unhandled type: %v", v.Kind())
+		}
+		return nil
+	case True, False:
+		value := tok[0] == 't'
+		switch v.Kind() {
+		case reflect.Bool:
+			v.SetBool(value)
+		case reflect.Interface:
+			if v.NumMethod() > 0 {
+				return fmt.Errorf("cannot decode bool into Go value of type %v", v.Type())
+			}
+			v.Set(reflect.ValueOf(value))
+		default:
+			return fmt.Errorf("unhandled type: %v", v.Kind())
+		}
+		return nil
+	case Null:
+		switch v.Kind() {
+		case reflect.Ptr, reflect.Map, reflect.Slice:
+			v.Set(reflect.Zero(v.Type()))
+			return nil
+		default:
+			return fmt.Errorf("unhandled type: %v", v.Kind())
+		}
+	case '-', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
+		switch v.Kind() {
+		case reflect.Interface:
+			if v.NumMethod() > 0 {
+				return fmt.Errorf("cannot decode number into Go value of type %v", v.Type())
+			}
+			f, err := strconv.ParseFloat(bytesToString(tok), 64)
+			if err != nil {
+				return fmt.Errorf("cannot convert %q to float: %v", tok, err)
+			}
+			v.Set(reflect.ValueOf(f))
+		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+			i, err := strconv.ParseInt(bytesToString(tok), 10, 64)
+			if err != nil || v.OverflowInt(i) {
+				return fmt.Errorf("cannot convert %q to int: %v", tok, err)
+			}
+			v.SetInt(i)
+		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+			u, err := strconv.ParseUint(bytesToString(tok), 10, 64)
+			if err != nil || v.OverflowUint(u) {
+				return fmt.Errorf("cannot convert %q to uint: %v", tok, err)
+			}
+			v.SetUint(u)
+		case reflect.Float64, reflect.Float32:
+			f, err := strconv.ParseFloat(bytesToString(tok), v.Type().Bits())
+			if err != nil || v.OverflowFloat(f) {
+				return fmt.Errorf("cannot convert %q to float: %v", tok, err)
+			}
+			v.SetFloat(f)
+		default:
+			return fmt.Errorf("unhandled type: %v", v.Kind())
+		}
+		return nil
+	default:
+		return fmt.Errorf("unhandled token: %c", tok[0])
+	}
+}
+
+func (d *Decoder) decodeValueAny() (interface{}, error) {
+	tok, err := d.Token()
+	if err != nil {
+		return nil, err
+	}
+	switch tok[0] {
+	case '{':
+		return d.decodeMapAny()
+	case '[':
+		return d.decodeSliceAny()
+	case True, False:
+		return tok[0] == 't', nil
+	case '"':
+		return string(tok[1 : len(tok)-1]), nil
+	case Null:
+		return nil, nil
+	case '-', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
+		return strconv.ParseFloat(bytesToString(tok), 64)
+	default:
+		return fmt.Errorf("decodeValueAny: unhandled token: %c", tok[0]), nil
+	}
+}
+
+func (d *Decoder) decodeMapAny() (map[string]interface{}, error) {
+	m := make(map[string]interface{})
+	for {
+		tok, err := d.Token()
+		if err != nil {
+			return nil, err
+		}
+		if tok[0] == '}' {
+			return m, nil
+		}
+		key := string(tok[1 : len(tok)-1])
+
+		val, err := d.decodeValueAny()
+		if err != nil {
+			return nil, fmt.Errorf("decodeMapAny: %w", err)
+		}
+		m[key] = val
+	}
+}
+
+func (d *Decoder) decodeSliceAny() ([]interface{}, error) {
+	s := make([]interface{}, 0, 1)
+	for {
+		tok, err := d.Token()
+		if err != nil {
+			return nil, err
+		}
+		switch tok[0] {
+		case ']':
+			return s, nil
+		case '{':
+			m, err := d.decodeMapAny()
+			if err != nil {
+				return nil, err
+			}
+			s = append(s, m)
+		case '[':
+			sv, err := d.decodeSliceAny()
+			if err != nil {
+				return nil, err
+			}
+			s = append(s, sv)
+		case True, False:
+			s = append(s, tok[0] == 't')
+		case Null:
+			s = append(s, nil)
+		case '-', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
+			f, err := strconv.ParseFloat(bytesToString(tok), 64)
+			if err != nil {
+				return nil, fmt.Errorf("cannot convert %q to float: %v", tok, err)
+			}
+			s = append(s, f)
+		}
+	}
+}
+
+func (d *Decoder) decodeObjectKey(v reflect.Value) error {
+	for {
+		tok, err := d.Token()
+		if err != nil {
+			return err
+		}
+		switch tok[0] {
+		case '}':
+			return nil
+		case '"':
+			switch v.Kind() {
+			case reflect.Map:
+				t := v.Type()
+				kt := t.Key()
+				switch kt.Kind() {
+				case reflect.String:
+					key := string(tok[1 : len(tok)-1])
+					kv := reflect.ValueOf(key).Convert(kt)
+
+					value := reflect.New(t.Elem()).Elem()
+					err := d.decodeValue(value)
+					if err != nil {
+						return err
+					}
+					v.SetMapIndex(kv, value)
+				default:
+					return fmt.Errorf("unhandled map key type: %v", t.Key().Kind())
+				}
+
+			default:
+				return fmt.Errorf("unhandled type: %v", v.Kind())
+			}
+		default:
+			return fmt.Errorf("unhandled token: %c", tok[0])
+		}
+	}
+}
+
+func bytesToString(b []byte) string {
+	sliceHeader := (*reflect.SliceHeader)(unsafe.Pointer(&b))
+	stringHeader := reflect.StringHeader{Data: sliceHeader.Data, Len: sliceHeader.Len}
+	return *(*string)(unsafe.Pointer(&stringHeader))
 }

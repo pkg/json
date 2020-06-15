@@ -63,6 +63,47 @@ func BenchmarkScanner(b *testing.B) {
 	}
 }
 
+func BenchmarkDecoderDecodeInterfaceAny(b *testing.B) {
+	for _, tc := range inputs {
+
+		f, err := os.Open(filepath.Join("testdata", tc.path))
+		check(b, err)
+		defer f.Close()
+		gz, err := gzip.NewReader(f)
+		check(b, err)
+		buf, err := ioutil.ReadAll(gz)
+		check(b, err)
+
+		r := bytes.NewReader(buf)
+
+		b.Run("pkgjson/"+tc.path, func(b *testing.B) {
+			b.ReportAllocs()
+			b.SetBytes(int64(len(buf)))
+			b.ResetTimer()
+			for i := 0; i < b.N; i++ {
+				r.Seek(0, 0)
+				dec := NewDecoderBuffer(r, _buf[:])
+				var i interface{}
+				err := dec.Decode(&i)
+				check(b, err)
+			}
+		})
+
+		b.Run("encodingjson/"+tc.path, func(b *testing.B) {
+			b.ReportAllocs()
+			b.SetBytes(int64(len(buf)))
+			b.ResetTimer()
+			for i := 0; i < b.N; i++ {
+				r.Seek(0, 0)
+				dec := json.NewDecoder(r)
+				var i interface{}
+				err := dec.Decode(&i)
+				check(b, err)
+			}
+		})
+	}
+}
+
 func BenchmarkDecoder(b *testing.B) {
 	for _, tc := range inputs {
 
