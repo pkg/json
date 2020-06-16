@@ -39,7 +39,6 @@ func ExampleScanner_Next() {
 	// null
 	// ]
 	// }
-
 }
 
 func ExampleDecoder_Token() {
@@ -67,5 +66,17 @@ func ExampleDecoder_Token() {
 	// null
 	// ]
 	// }
+}
 
+func ExampleDecoder_Decode() {
+	input := `{"a": 1,"b": 123.456, "c": [null]}`
+	dec := json.NewDecoder(strings.NewReader(input))
+	var i interface{}
+	err := dec.Decode(&i)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("%v\n", i)
+
+	// Output: map[a:1 b:123.456 c:[<nil>]]
 }
