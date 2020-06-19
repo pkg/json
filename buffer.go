@@ -32,7 +32,7 @@ func (b *buffer) window() []byte {
 }
 
 func (b *buffer) avail() int {
-	return cap(b.buf) - b.remaining()
+	return cap(b.buf) - len(b.buf)
 }
 
 func (b *buffer) remaining() int {
@@ -49,10 +49,10 @@ func (b *buffer) extend(request int) int {
 	if b.remaining() == 0 {
 		b.buf, b.released = b.buf[:0], 0
 	}
-	if cap(b.buf)-len(b.buf) >= request {
-		// space exists between len and cap, extend the slice len
-		// towards cap.
-		b.buf = b.buf[:len(b.buf)+request]
+	if b.avail() >= request {
+		// space exists between len and cap, grow the buffer to the
+		// full capacity to try to read as much as possible.
+		b.buf = b.buf[:cap(b.buf)]
 		return request
 	}
 
