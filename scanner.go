@@ -143,18 +143,23 @@ func (s *Scanner) Next() []byte {
 }
 
 func (s *Scanner) validateToken(expected string) int {
-	s.ensure(len(expected))
-	if len(expected) > s.remaining() {
-		// error, cannot be valid json.
-		return 0
+	w := s.window()
+	for {
+		if len(expected) <= len(w) {
+			if string(w[:len(expected)]) != expected {
+				// doesn't match
+				return 0
+			}
+			s.pos = len(expected)
+			return len(expected)
+		}
+		// If no data is left, we need to extend
+		if s.extend(0) == 0 {
+			// eof
+			return 0
+		}
+		w = s.window()
 	}
-	w := s.window()[:len(expected)]
-	if string(w) != expected {
-		// doesn't match
-		return 0
-	}
-	s.pos = len(expected)
-	return len(expected)
 }
 
 func (s *Scanner) parseString() int {
@@ -293,14 +298,6 @@ func (s *Scanner) parseNumber() int {
 			}
 		}
 		w = s.window()[pos:]
-	}
-}
-
-func (s *Scanner) ensure(elems int) {
-	for s.remaining() < elems {
-		if s.extend(elems-s.remaining()) == 0 {
-			break
-		}
 	}
 }
 
