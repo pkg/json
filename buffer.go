@@ -58,7 +58,8 @@ func (b *buffer) extend(request int) int {
 
 	if cap(b.buf)-b.remaining() >= request {
 		// buffer has enough space if we move the data to the front.
-		copy(b.buf[:b.remaining()+request], b.buf[b.released:])
+		copy(b.buf, b.buf[b.released:])
+		b.buf = b.buf[:cap(b.buf)]
 		b.released = 0
 		return request
 	}
@@ -71,7 +72,6 @@ func (b *buffer) extend(request int) int {
 
 	n := copy(newbuf, b.buf[b.released:])
 	b.buf = newbuf[:n+request]
-
 	b.released = 0
 	return request
 }
