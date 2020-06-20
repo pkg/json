@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"encoding/json"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
@@ -51,14 +52,60 @@ func BenchmarkScanner(b *testing.B) {
 			for i := 0; i < b.N; i++ {
 				r.Seek(0, 0)
 				sc := &Scanner{
-					r: r,
-					buffer: buffer{
-						buf: _buf[:0],
+					br: byteReader{
+						data: _buf[:0],
+						r:    r,
 					},
 				}
+				n := 0
 				for len(sc.Next()) > 0 {
-
+					n++
 				}
+				if n != tc.alltokens {
+					b.Fatalf("expected %v tokens, got %v", tc.alltokens, n)
+				}
+
+			}
+		})
+	}
+}
+
+func BenchmarkBufferSize(b *testing.B) {
+	sizes := []int{
+		64, 256, 1 << 10, 8 << 10, 1 << 20,
+	}
+
+	for _, tc := range inputs {
+
+		f, err := os.Open(filepath.Join("testdata", tc.path))
+		check(b, err)
+		defer f.Close()
+		gz, err := gzip.NewReader(f)
+		check(b, err)
+		buf, err := ioutil.ReadAll(gz)
+		check(b, err)
+		r := bytes.NewReader(buf)
+
+		b.Run(tc.path, func(b *testing.B) {
+			for _, sz := range sizes {
+				buf := make([]byte, sz)
+				b.Run(fmt.Sprint(sz), func(b *testing.B) {
+					b.ReportAllocs()
+					b.SetBytes(int64(len(buf)))
+					b.ResetTimer()
+					for i := 0; i < b.N; i++ {
+						r.Seek(0, 0)
+						sc := &Scanner{
+							br: byteReader{
+								data: buf[:0],
+								r:    r,
+							},
+						}
+						for len(sc.Next()) > 0 {
+
+						}
+					}
+				})
 			}
 		})
 	}
