@@ -16,21 +16,22 @@ import (
 var _buf [8 << 10]byte
 
 var inputs = []struct {
-	path      string
-	tokens    int // decoded tokens
-	alltokens int // raw tokens, includes : and ,
+	path       string
+	tokens     int // decoded tokens
+	alltokens  int // raw tokens, includes : and ,
+	whitespace int // number of whitespace chars
 }{
 	// from https://github.com/miloyip/nativejson-benchmark
-	{"canada.json.gz", 223236, 334373},
-	{"citm_catalog.json.gz", 85035, 135990},
-	{"twitter.json.gz", 29573, 55263},
-	{"code.json.gz", 217707, 396293},
+	{"canada.json.gz", 223236, 334373, 33},
+	{"citm_catalog.json.gz", 85035, 135990, 1227563},
+	{"twitter.json.gz", 29573, 55263, 167931},
+	{"code.json.gz", 217707, 396293, 3},
 
 	// from https://raw.githubusercontent.com/mailru/easyjson/master/benchmark/example.json
-	{"example.json.gz", 710, 1297},
+	{"example.json.gz", 710, 1297, 4246},
 
 	// from https://github.com/ultrajson/ultrajson/blob/master/tests/sample.json
-	{"sample.json.gz", 5276, 8677},
+	{"sample.json.gz", 5276, 8677, 518549},
 }
 
 func BenchmarkScanner(b *testing.B) {
