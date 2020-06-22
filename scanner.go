@@ -77,11 +77,14 @@ func (s *Scanner) Next() []byte {
 				length = 1
 				s.pos = 1
 			case True:
-				length = s.validateToken("true")
+				length = validateToken(&s.br, "true")
+				s.pos = length
 			case False:
-				length = s.validateToken("false")
+				length = validateToken(&s.br, "false")
+				s.pos = length
 			case Null:
-				length = s.validateToken("null")
+				length = validateToken(&s.br, "null")
+				s.pos = length
 			case String:
 				// string
 				length = s.parseString()
@@ -106,24 +109,23 @@ func (s *Scanner) Next() []byte {
 	}
 }
 
-func (s *Scanner) validateToken(expected string) int {
+func validateToken(br *byteReader, expected string) int {
 	n := len(expected)
-	w := s.br.window()
+	w := br.window()
 	for {
 		if n <= len(w) {
 			if string(w[:n]) != expected {
 				// doesn't match
 				return 0
 			}
-			s.pos = n
 			return n
 		}
 		// If no data is left, we need to extend
-		if s.br.extend() == 0 {
+		if br.extend() == 0 {
 			// eof
 			return 0
 		}
-		w = s.br.window()
+		w = br.window()
 	}
 }
 
