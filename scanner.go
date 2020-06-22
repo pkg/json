@@ -87,10 +87,11 @@ func (s *Scanner) Next() []byte {
 				s.pos = length
 			case String:
 				// string
-				length = s.parseString()
+				length = parseString(&s.br)
 				if length < 2 {
 					return nil
 				}
+				s.pos = length
 			default:
 				// ensure the number is correct.
 				length = s.parseNumber()
@@ -129,10 +130,13 @@ func validateToken(br *byteReader, expected string) int {
 	}
 }
 
-func (s *Scanner) parseString() int {
+// parseString returns the length of the string token
+// located at the start of the window or 0 if there is no closing
+// " before the end of the byteReader.
+func parseString(br *byteReader) int {
 	pos := 1
 	escaped := false
-	w := s.br.window()[pos:]
+	w := br.window()[pos:]
 	for {
 		for _, c := range w {
 			pos++
@@ -145,17 +149,16 @@ func (s *Scanner) parseString() int {
 				}
 				if c == '"' {
 					// finished
-					s.pos = pos
 					return pos
 				}
 			}
 		}
 		// need more data from the pipe
-		if s.br.extend() == 0 {
+		if br.extend() == 0 {
 			// EOF.
 			return -1
 		}
-		w = s.br.window()[pos:]
+		w = br.window()[pos:]
 	}
 }
 
