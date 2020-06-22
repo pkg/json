@@ -2,6 +2,7 @@ package json
 
 import (
 	"compress/gzip"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -96,15 +97,8 @@ func TestParseString(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.json, func(t *testing.T) {
 			r := strings.NewReader(tc.json)
-			scanner := &Scanner{
-				r: r,
-			}
-			scanner.extend(0) // consume reader
-			n := scanner.parseString()
-			if n != len(tc.want) {
-				t.Fatalf("expected: %v, got: %v", len(tc.want), n)
-			}
-			got := scanner.buffer.window()[:n]
+			scanner := NewScanner(r)
+			got := scanner.Next()
 			if string(got) != tc.want {
 				t.Fatalf("expected: %q, got: %q", tc.want, got)
 			}
@@ -133,15 +127,8 @@ func TestParseNumber(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc, func(t *testing.T) {
 			r := strings.NewReader(tc)
-			scanner := &Scanner{
-				r: r,
-			}
-			scanner.extend(0) // consume reader
-			n := scanner.parseNumber()
-			if n != len(tc) {
-				t.Fatalf("expected: %v, got: %v", len(tc), n)
-			}
-			got := scanner.buffer.window()[:n]
+			scanner := NewScanner(r)
+			got := scanner.Next()
 			if string(got) != tc {
 				t.Fatalf("expected: %q, got: %q", tc, got)
 			}
@@ -175,9 +162,9 @@ func BenchmarkParseNumber(b *testing.B) {
 			for i := 0; i < b.N; i++ {
 				r.Seek(0, 0)
 				scanner := &Scanner{
-					r: r,
-					buffer: buffer{
-						buf: buf[:0],
+					br: byteReader{
+						data: buf[:0],
+						r:    r,
 					},
 				}
 				n := scanner.parseNumber()
@@ -190,29 +177,45 @@ func BenchmarkParseNumber(b *testing.B) {
 }
 
 func TestScanner(t *testing.T) {
-	for _, tc := range inputs {
+	sizes := []int{
+		1, 8, 64, 256, 1 << 10, 8 << 10, 1 << 20,
+	}
 
-		f, err := os.Open(filepath.Join("testdata", tc.path))
-		check(t, err)
-		defer f.Close()
-		gz, err := gzip.NewReader(f)
-		check(t, err)
-		r := &SmallReader{r: gz}
+	for _, sz := range sizes {
+		t.Run(fmt.Sprint(sz), func(t *testing.T) {
+			buf := make([]byte, sz)
 
-		t.Run(tc.path, func(t *testing.T) {
-			sc := &Scanner{
-				r: r,
-				buffer: buffer{
-					buf: _buf[:0],
-				},
-			}
-			n := 0
-			for len(sc.Next()) > 0 {
-				n++
-			}
-			if n != tc.alltokens {
-				t.Fatalf("expected %v tokens, got %v", tc.alltokens, n)
+			for _, tc := range inputs {
+
+				f, err := os.Open(filepath.Join("testdata", tc.path))
+				check(t, err)
+				defer f.Close()
+				gz, err := gzip.NewReader(f)
+				check(t, err)
+
+				t.Run(tc.path, func(t *testing.T) {
+					sc := &Scanner{
+						br: byteReader{
+							data: buf[:0],
+							r:    gz,
+						},
+					}
+					n := 0
+					for len(sc.Next()) > 0 {
+						n++
+					}
+					if n != tc.alltokens {
+						t.Fatalf("expected %v tokens, got %v", tc.alltokens, n)
+					}
+				})
 			}
 		})
 	}
+}
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }

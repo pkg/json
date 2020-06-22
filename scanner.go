@@ -25,53 +25,20 @@ var whitespace = [256]bool{
 }
 
 // NewScanner returns a new Scanner for the io.Reader r.
+// A Scanner reads from the supplied io.Reader and produces via Next a stream
+// of tokens, expressed as []byte slices.
 func NewScanner(r io.Reader) *Scanner {
 	return &Scanner{
-		r: r,
+		br: byteReader{
+			r: r,
+		},
 	}
 }
 
 // Scanner implements a JSON scanner as defined in RFC 7159.
-// A Scanner reads from the supplied io.Reader and produces via Next a stream
-// of tokens, expressed as []byte slices.
 type Scanner struct {
-	stack bitvec // unused but the padding is worth up to 3% on the mb/sec
-	pos   int
-	r     io.Reader
-	buffer
-	err error
-}
-
-const optimalReadSize = 1024
-
-func (s *Scanner) extend(elements int) int {
-	oldLen := s.remaining()
-
-	if elements == 0 || elements < optimalReadSize && s.avail() == 0 {
-		// optimal read, or first read. Use optimal read size
-		elements = optimalReadSize
-	} else {
-		// requesting a specific amount. Don't want to over-allocate the
-		// buffer, limit the request to 2x current elements, or optimal
-		// read size, whatever is larger.
-		cap := max(optimalReadSize, oldLen*2)
-		elements = min(cap, elements)
-	}
-
-	// ensure we maximize buffer use.
-	elements = max(elements, s.avail())
-
-	if s.buffer.extend(elements) == 0 {
-		// could not extend
-		return 0
-	}
-
-	buf := s.window()[oldLen:]
-	var nread int
-	nread, s.err = s.r.Read(buf)
-	// give back data we did not read.
-	s.releaseBack(s.remaining() - oldLen - nread)
-	return nread
+	br  byteReader
+	pos int
 }
 
 // Next returns a []byte referencing the the next lexical token in the stream.
@@ -93,8 +60,8 @@ func (s *Scanner) extend(elements int) int {
 //  " A string, possibly containing backslash escaped entites.
 //  -, 0-9 A number
 func (s *Scanner) Next() []byte {
-	s.releaseFront(s.pos)
-	w := s.window()
+	s.br.release(s.pos)
+	w := s.br.window()
 	pos := 0
 	for {
 		for _, c := range w {
@@ -104,7 +71,7 @@ func (s *Scanner) Next() []byte {
 				continue
 			}
 			length := 0
-			s.releaseFront(pos)
+			s.br.release(pos)
 			switch c {
 			case ObjectStart, ObjectEnd, Colon, Comma, ArrayStart, ArrayEnd:
 				length = 1
@@ -117,55 +84,53 @@ func (s *Scanner) Next() []byte {
 				length = s.validateToken("null")
 			case String:
 				// string
-				numChars := s.parseString()
-				if numChars < 2 {
+				length = s.parseString()
+				if length < 2 {
 					return nil
 				}
-				length = numChars
 			default:
 				// ensure the number is correct.
-				numChars := s.parseNumber()
-				if numChars < 0 {
+				length = s.parseNumber()
+				if length < 0 {
 					return nil
 				}
-				length = numChars
-
 			}
-			return s.window()[:length]
+			return s.br.window()[:length]
 		}
 		// If no data is left, we need to extend
-		if s.extend(0) == 0 {
+		if s.br.extend() == 0 {
 			// eof
 			return nil
 		}
-		w = s.window()[pos:]
+		w = s.br.window()[pos:]
 	}
 }
 
 func (s *Scanner) validateToken(expected string) int {
-	w := s.window()
+	n := len(expected)
+	w := s.br.window()
 	for {
-		if len(expected) <= len(w) {
-			if string(w[:len(expected)]) != expected {
+		if n <= len(w) {
+			if string(w[:n]) != expected {
 				// doesn't match
 				return 0
 			}
-			s.pos = len(expected)
-			return len(expected)
+			s.pos = n
+			return n
 		}
 		// If no data is left, we need to extend
-		if s.extend(0) == 0 {
+		if s.br.extend() == 0 {
 			// eof
 			return 0
 		}
-		w = s.window()
+		w = s.br.window()
 	}
 }
 
 func (s *Scanner) parseString() int {
 	pos := 1
 	escaped := false
-	w := s.window()[pos:]
+	w := s.br.window()[pos:]
 	for {
 		for _, c := range w {
 			pos++
@@ -184,17 +149,17 @@ func (s *Scanner) parseString() int {
 			}
 		}
 		// need more data from the pipe
-		if s.extend(0) == 0 {
+		if s.br.extend() == 0 {
 			// EOF.
 			return -1
 		}
-		w = s.window()[pos:]
+		w = s.br.window()[pos:]
 	}
 }
 
 func (s *Scanner) parseNumber() int {
 	const (
-		begin = 1 << iota
+		begin = iota
 		sign
 		leadingzero
 		anydigit1
@@ -206,8 +171,9 @@ func (s *Scanner) parseNumber() int {
 	)
 
 	pos := 0
-	var state uint16 = begin
-	w := s.window()[pos:]
+	w := s.br.window()
+	// int vs uint8 costs 10% on canada.json
+	var state uint8 = begin
 	for {
 		for _, elem := range w {
 			switch state {
@@ -285,7 +251,7 @@ func (s *Scanner) parseNumber() int {
 		}
 
 		// need more data from the pipe
-		if s.extend(0) == 0 {
+		if s.br.extend() == 0 {
 			// end of the item. However, not necessarily an error. Make
 			// sure we are in a state that allows ending the number.
 			switch state {
@@ -297,10 +263,10 @@ func (s *Scanner) parseNumber() int {
 				return -1
 			}
 		}
-		w = s.window()[pos:]
+		w = s.br.window()[pos:]
 	}
 }
 
 // Error returns the first error encountered.
 // When underlying reader is exhausted, Error returns io.EOF.
-func (s *Scanner) Error() error { return s.err }
+func (s *Scanner) Error() error { return s.br.err }
