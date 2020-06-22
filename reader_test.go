@@ -46,7 +46,7 @@ func countWhitespace(br *byteReader) int {
 	w := br.window()
 	for {
 		for _, c := range w {
-			if whitespace[c] {
+			if isWhitespace(c) {
 				n++
 			}
 		}

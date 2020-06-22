@@ -17,13 +17,6 @@ const (
 	Null        = 'n' // n
 )
 
-var whitespace = [256]bool{
-	' ':  true,
-	'\r': true,
-	'\n': true,
-	'\t': true,
-}
-
 // NewScanner returns a new Scanner for the io.Reader r.
 // A Scanner reads from the supplied io.Reader and produces via Next a stream
 // of tokens, expressed as []byte slices.
@@ -65,8 +58,7 @@ func (s *Scanner) Next() []byte {
 	pos := 0
 	for {
 		for _, c := range w {
-			// strip any leading whitespace.
-			if whitespace[c] {
+			if isWhitespace(c) {
 				pos++
 				continue
 			}
@@ -108,6 +100,10 @@ func (s *Scanner) Next() []byte {
 		}
 		w = s.br.window()[pos:]
 	}
+}
+
+func isWhitespace(c byte) bool {
+	return c <= ' ' && (c == ' ' || c == '\n' || c == '\r' || c == '\t')
 }
 
 func validateToken(br *byteReader, expected string) int {
