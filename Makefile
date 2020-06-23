@@ -1,6 +1,6 @@
 BENCH_OPTS := \
 	-test.run=xxx \
-	-test.bench=Scanner \
+	-test.bench=CountWhitespace \
 	-test.count=5 \
 	-test.benchtime=5s
 

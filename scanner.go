@@ -17,13 +17,6 @@ const (
 	Null        = 'n' // n
 )
 
-var whitespace = [256]bool{
-	' ':  true,
-	'\r': true,
-	'\n': true,
-	'\t': true,
-}
-
 // NewScanner returns a new Scanner for the io.Reader r.
 // A Scanner reads from the supplied io.Reader and produces via Next a stream
 // of tokens, expressed as []byte slices.
@@ -39,6 +32,13 @@ func NewScanner(r io.Reader) *Scanner {
 type Scanner struct {
 	br  byteReader
 	pos int
+}
+
+var whitespace = [256]bool{
+	' ':  true,
+	'\r': true,
+	'\n': true,
+	'\t': true,
 }
 
 // Next returns a []byte referencing the the next lexical token in the stream.
