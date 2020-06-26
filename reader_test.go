@@ -1,30 +1,16 @@
 package json
 
 import (
-	"bytes"
-	"compress/gzip"
-	"io/ioutil"
-	"os"
-	"path/filepath"
 	"testing"
 )
 
 func BenchmarkCountWhitespace(b *testing.B) {
 	var buf [8 << 10]byte
 	for _, tc := range inputs {
-
-		f, err := os.Open(filepath.Join("testdata", tc.path))
-		check(b, err)
-		defer f.Close()
-		gz, err := gzip.NewReader(f)
-		check(b, err)
-		data, err := ioutil.ReadAll(gz)
-		check(b, err)
-		r := bytes.NewReader(data)
-
+		r := fixture(b, tc.path)
 		b.Run(tc.path, func(b *testing.B) {
 			b.ReportAllocs()
-			b.SetBytes(int64(len(data)))
+			b.SetBytes(r.Size())
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
 				r.Seek(0, 0)

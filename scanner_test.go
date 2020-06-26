@@ -1,11 +1,8 @@
 package json
 
 import (
-	"compress/gzip"
 	"fmt"
 	"io"
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -157,7 +154,7 @@ func BenchmarkParseNumber(b *testing.B) {
 	for _, tc := range tests {
 		r := strings.NewReader(tc)
 		b.Run(tc, func(b *testing.B) {
-			b.SetBytes(int64(len(tc)))
+			b.SetBytes(r.Size())
 			b.ReportAllocs()
 			for i := 0; i < b.N; i++ {
 				r.Seek(0, 0)
@@ -184,20 +181,13 @@ func TestScanner(t *testing.T) {
 	for _, sz := range sizes {
 		t.Run(fmt.Sprint(sz), func(t *testing.T) {
 			buf := make([]byte, sz)
-
 			for _, tc := range inputs {
-
-				f, err := os.Open(filepath.Join("testdata", tc.path))
-				check(t, err)
-				defer f.Close()
-				gz, err := gzip.NewReader(f)
-				check(t, err)
-
+				r := fixture(t, tc.path)
 				t.Run(tc.path, func(t *testing.T) {
 					sc := &Scanner{
 						br: byteReader{
 							data: buf[:0],
-							r:    gz,
+							r:    r,
 						},
 					}
 					n := 0
