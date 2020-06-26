@@ -1,8 +1,7 @@
 BENCH_OPTS := \
 	-test.run=xxx \
-	-test.bench=CountWhitespace \
-	-test.count=5 \
-	-test.benchtime=5s
+	-test.bench="(DecoderNextToken)" \
+	-test.count=5
 
 benchstat: old.txt new.txt
 	benchstat {old,new}.txt
