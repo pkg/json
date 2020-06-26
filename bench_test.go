@@ -62,7 +62,8 @@ func BenchmarkScanner(b *testing.B) {
 }
 
 func BenchmarkBufferSize(b *testing.B) {
-	sizes := []int{64, 256, 1 << 10, 8 << 10, 1 << 20}
+	b.Skip()
+	sizes := []int{16, 64, 256, 512, 1 << 10, 2 << 10, 4 << 10, 8 << 10, 16 << 10, 64 << 10, 1 << 20}
 	for _, tc := range inputs {
 		r := fixture(b, tc.path)
 		b.Run(tc.path, func(b *testing.B) {

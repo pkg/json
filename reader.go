@@ -23,8 +23,8 @@ func (b *byteReader) window() []byte {
 
 // tuning constants for byteReader.extend.
 const (
-	newBufferSize = 1024
-	minReadSize   = 2048
+	newBufferSize = 4096
+	minReadSize   = newBufferSize >> 2
 )
 
 // extend extends the window with data from the underlying reader.
