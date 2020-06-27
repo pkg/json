@@ -80,4 +80,4 @@ Great! Please follow this two step process:
 
 ## Standing on the shoulders of giants
 
-This project is heavily influenced by Steven Schveighoffer's [`iopipe`](https://www.youtube.com/watch?v=un-bZdyumog).
+This project is heavily influenced by Steven Schveighoffer's [`iopipe`](https://www.youtube.com/watch?v=un-bZdyumog) and [Phil Pearl](https://philpearl.github.io/post/reader/).
