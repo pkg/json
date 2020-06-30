@@ -19,7 +19,7 @@ func NewDecoder(r io.Reader) *Decoder {
 // the []byte buf provided for working storage.
 func NewDecoderBuffer(r io.Reader, buf []byte) *Decoder {
 	return &Decoder{
-		scanner: &Scanner{
+		scanner: Scanner{
 			br: byteReader{
 				data: buf[:0],
 				r:    r,
@@ -63,7 +63,7 @@ func (s *stack) len() int { return len(*s) }
 
 // A Decoder decodes JSON values from an input stream.
 type Decoder struct {
-	scanner *Scanner
+	scanner Scanner
 	state   func(*Decoder) ([]byte, error)
 	stack
 }
