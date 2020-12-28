@@ -62,8 +62,8 @@ var whitespace = [256]bool{
 func (s *Scanner) Next() []byte {
 	s.br.release(s.pos)
 	w := s.br.window()
-	pos := 0
 	for {
+		pos := 0
 		for _, c := range w {
 			// strip any leading whitespace.
 			if whitespace[c] {
@@ -71,10 +71,15 @@ func (s *Scanner) Next() []byte {
 				continue
 			}
 
-			s.br.release(pos)
+			// simple case
 			switch c {
 			case ObjectStart, ObjectEnd, Colon, Comma, ArrayStart, ArrayEnd:
-				s.pos = 1
+				s.pos = pos + 1
+				return w[pos:s.pos]
+			}
+
+			s.br.release(pos)
+			switch c {
 			case True:
 				s.pos = validateToken(&s.br, "true")
 			case False:
@@ -93,12 +98,16 @@ func (s *Scanner) Next() []byte {
 			}
 			return s.br.window()[:s.pos]
 		}
-		// If no data is left, we need to extend
+
+		// its all whitespace, ignore it
+		s.br.release(pos)
+
+		// refill buffer
 		if s.br.extend() == 0 {
 			// eof
 			return nil
 		}
-		w = s.br.window()[pos:]
+		w = s.br.window()
 	}
 }
 
