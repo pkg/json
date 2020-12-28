@@ -112,22 +112,21 @@ func (s *Scanner) Next() []byte {
 
 func validateToken(br *byteReader, expected string) int {
 	n := len(expected)
+loop:
 	w := br.window()
-	for {
-		if n <= len(w) {
-			if string(w[:n]) != expected {
-				// doesn't match
-				return 0
-			}
-			return n
-		}
-		// If no data is left, we need to extend
+	if n > len(w) {
+		// not enough data is left, we need to extend
 		if br.extend() == 0 {
 			// eof
 			return 0
 		}
-		w = br.window()
+		goto loop
 	}
+	if string(w[:n]) != expected {
+		// doesn't match
+		return 0
+	}
+	return n
 }
 
 // parseString returns the length of the string token
