@@ -1,6 +1,6 @@
 BENCH_OPTS := \
 	-test.run=xxx \
-	-test.bench="DecoderNextToken/pkg" \
+	-test.bench="Scanner" \
 	-test.count=5
 
 benchstat: old.txt new.txt
