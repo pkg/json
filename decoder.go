@@ -29,22 +29,6 @@ func NewDecoderBuffer(r io.Reader, buf []byte) *Decoder {
 	}
 }
 
-type bitvec struct {
-	len int
-	val uint64
-}
-
-func (bv *bitvec) push(v uint64) {
-	bv.val |= v << bv.len
-	bv.len++
-}
-
-func (bv *bitvec) pop() bool {
-	v := bv.val&1<<bv.len != 0
-	bv.len--
-	return v
-}
-
 type stack []bool
 
 func (s *stack) push(v bool) {
@@ -525,44 +509,6 @@ func (d *Decoder) decodeSliceAny() ([]interface{}, error) {
 				return nil, fmt.Errorf("cannot convert %q to float: %v", tok, err)
 			}
 			s = append(s, f)
-		}
-	}
-}
-
-func (d *Decoder) decodeObjectKey(v reflect.Value) error {
-	for {
-		tok, err := d.NextToken()
-		if err != nil {
-			return err
-		}
-		switch tok[0] {
-		case '}':
-			return nil
-		case '"':
-			switch v.Kind() {
-			case reflect.Map:
-				t := v.Type()
-				kt := t.Key()
-				switch kt.Kind() {
-				case reflect.String:
-					key := string(tok[1 : len(tok)-1])
-					kv := reflect.ValueOf(key).Convert(kt)
-
-					value := reflect.New(t.Elem()).Elem()
-					err := d.decodeValue(value)
-					if err != nil {
-						return err
-					}
-					v.SetMapIndex(kv, value)
-				default:
-					return fmt.Errorf("unhandled map key type: %v", t.Key().Kind())
-				}
-
-			default:
-				return fmt.Errorf("unhandled type: %v", v.Kind())
-			}
-		default:
-			return fmt.Errorf("decodeObjectKey: unhandled token: %c", tok[0])
 		}
 	}
 }
