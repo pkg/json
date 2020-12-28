@@ -70,36 +70,28 @@ func (s *Scanner) Next() []byte {
 				pos++
 				continue
 			}
-			length := 0
+
 			s.br.release(pos)
 			switch c {
 			case ObjectStart, ObjectEnd, Colon, Comma, ArrayStart, ArrayEnd:
-				length = 1
 				s.pos = 1
 			case True:
-				length = validateToken(&s.br, "true")
-				s.pos = length
+				s.pos = validateToken(&s.br, "true")
 			case False:
-				length = validateToken(&s.br, "false")
-				s.pos = length
+				s.pos = validateToken(&s.br, "false")
 			case Null:
-				length = validateToken(&s.br, "null")
-				s.pos = length
+				s.pos = validateToken(&s.br, "null")
 			case String:
-				// string
-				length = parseString(&s.br)
-				if length < 2 {
+				if s.parseString() < 2 {
 					return nil
 				}
-				s.pos = length
 			default:
 				// ensure the number is correct.
-				length = s.parseNumber()
-				if length < 0 {
+				if s.parseNumber() < 0 {
 					return nil
 				}
 			}
-			return s.br.window()[:length]
+			return s.br.window()[:s.pos]
 		}
 		// If no data is left, we need to extend
 		if s.br.extend() == 0 {
@@ -132,10 +124,10 @@ loop:
 // parseString returns the length of the string token
 // located at the start of the window or 0 if there is no closing
 // " before the end of the byteReader.
-func parseString(br *byteReader) int {
-	pos := 1
+func (s *Scanner) parseString() int {
 	escaped := false
-	w := br.window()[pos:]
+	w := s.br.window()[1:]
+	pos := 1
 	for {
 		for _, c := range w {
 			pos++
@@ -148,16 +140,17 @@ func parseString(br *byteReader) int {
 				}
 				if c == '"' {
 					// finished
+					s.pos = pos
 					return pos
 				}
 			}
 		}
 		// need more data from the pipe
-		if br.extend() == 0 {
+		if s.br.extend() == 0 {
 			// EOF.
 			return -1
 		}
-		w = br.window()[pos:]
+		w = s.br.window()[pos:]
 	}
 }
 
