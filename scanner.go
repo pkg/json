@@ -61,7 +61,7 @@ var whitespace = [256]bool{
 //  -, 0-9 A number
 func (s *Scanner) Next() []byte {
 	s.br.release(s.pos)
-	w := s.br.window()
+	w := s.br.window(0)
 loop:
 	for pos, c := range w {
 		// strip any leading whitespace.
@@ -94,7 +94,7 @@ loop:
 				return nil
 			}
 		}
-		return s.br.window()[:s.pos]
+		return s.br.window(0)[:s.pos]
 	}
 
 	// it's all whitespace, ignore it
@@ -105,14 +105,14 @@ loop:
 		// eof
 		return nil
 	}
-	w = s.br.window()
+	w = s.br.window(0)
 	goto loop
 }
 
 func validateToken(br *byteReader, expected string) int {
 	n := len(expected)
 loop:
-	w := br.window()
+	w := br.window(0)
 	if n > len(w) {
 		// not enough data is left, we need to extend
 		if br.extend() == 0 {
@@ -133,8 +133,8 @@ loop:
 // " before the end of the byteReader.
 func (s *Scanner) parseString() int {
 	escaped := false
-	w := s.br.window()[1:]
-	pos := 1
+	w := s.br.window(1)
+	pos := 0
 	for {
 		for _, c := range w {
 			pos++
@@ -147,17 +147,17 @@ func (s *Scanner) parseString() int {
 				}
 				if c == '"' {
 					// finished
-					s.pos = pos
-					return pos
+					s.pos = pos + 1
+					return s.pos
 				}
 			}
 		}
 		// need more data from the pipe
 		if s.br.extend() == 0 {
 			// EOF.
-			return -1
+			return 0
 		}
-		w = s.br.window()[pos:]
+		w = s.br.window(pos + 1)
 	}
 }
 
@@ -175,7 +175,7 @@ func (s *Scanner) parseNumber() int {
 	)
 
 	pos := 0
-	w := s.br.window()
+	w := s.br.window(0)
 	// int vs uint8 costs 10% on canada.json
 	var state uint8 = begin
 	for {
@@ -267,7 +267,7 @@ func (s *Scanner) parseNumber() int {
 				return -1
 			}
 		}
-		w = s.br.window()[pos:]
+		w = s.br.window(pos)
 	}
 }
 
