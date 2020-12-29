@@ -187,12 +187,11 @@ done:
 				}
 				fallthrough
 			case sign:
-				switch elem {
-				case '0':
-					state = leadingzero
-				case '1', '2', '3', '4', '5', '6', '7', '8', '9':
+				if elem >= '1' && elem <= '9' {
 					state = anydigit1
-				default:
+				} else if elem == '0' {
+					state = leadingzero
+				} else {
 					// error
 					return -1
 				}
@@ -219,9 +218,10 @@ done:
 					return -1
 				}
 			case anydigit2:
-				switch elem {
-				case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
+				if elem >= '0' && elem <= '9' {
 					break
+				}
+				switch elem {
 				case 'e', 'E':
 					state = exponent
 				default:
@@ -242,10 +242,9 @@ done:
 					return -1
 				}
 			case anydigit3:
-				if elem >= '0' && elem <= '9' {
-					break
+				if elem < '0' || elem > '9' {
+					break done
 				}
-				break done
 			}
 			pos++
 		}
