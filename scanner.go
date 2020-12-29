@@ -138,18 +138,15 @@ func (s *Scanner) parseString() int {
 	for {
 		for _, c := range w {
 			pos++
-			switch escaped {
-			case true:
+			switch {
+			case escaped:
 				escaped = false
-			case false:
-				if c == '\\' {
-					escaped = true
-				}
-				if c == '"' {
-					// finished
-					s.pos = pos + 1
-					return s.pos
-				}
+			case c == '"':
+				// finished
+				s.pos = pos + 1
+				return s.pos
+			case c == '\\':
+				escaped = true
 			}
 		}
 		// need more data from the pipe
