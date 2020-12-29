@@ -175,6 +175,7 @@ func (s *Scanner) parseNumber() int {
 	w := s.br.window(0)
 	// int vs uint8 costs 10% on canada.json
 	var state uint8 = begin
+done:
 	for {
 		for _, elem := range w {
 			switch state {
@@ -208,8 +209,7 @@ func (s *Scanner) parseNumber() int {
 				case 'e', 'E':
 					state = exponent
 				default:
-					s.pos = pos
-					return pos // finished
+					break done
 				}
 			case decimal:
 				if elem >= '0' && elem <= '9' {
@@ -245,8 +245,7 @@ func (s *Scanner) parseNumber() int {
 				if elem >= '0' && elem <= '9' {
 					break
 				}
-				s.pos = pos
-				return pos // finished
+				break done
 			}
 			pos++
 		}
@@ -257,8 +256,7 @@ func (s *Scanner) parseNumber() int {
 			// sure we are in a state that allows ending the number.
 			switch state {
 			case leadingzero, anydigit1, anydigit2, anydigit3:
-				s.pos = pos
-				return pos // finished.
+				break done
 			default:
 				// error otherwise, the number isn't complete.
 				return -1
@@ -266,6 +264,8 @@ func (s *Scanner) parseNumber() int {
 		}
 		w = s.br.window(pos)
 	}
+	s.pos = pos
+	return pos // finished.
 }
 
 // Error returns the first error encountered.
