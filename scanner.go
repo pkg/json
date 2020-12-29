@@ -90,9 +90,7 @@ loop:
 			}
 		default:
 			// ensure the number is correct.
-			if s.parseNumber() < 0 {
-				return nil
-			}
+			s.pos = s.parseNumber(c)
 		}
 		return s.br.window(0)[:s.pos]
 	}
@@ -158,7 +156,7 @@ func (s *Scanner) parseString() int {
 	}
 }
 
-func (s *Scanner) parseNumber() int {
+func (s *Scanner) parseNumber(c byte) int {
 	const (
 		begin = iota
 		leadingzero
@@ -174,12 +172,13 @@ func (s *Scanner) parseNumber() int {
 	w := s.br.window(0)
 	// int vs uint8 costs 10% on canada.json
 	var state uint8 = begin
-	if w[0] == '-' {
+
+	// handle the case that the first character is a hyphen
+	if c == '-' {
 		pos++
 		w = s.br.window(1)
 	}
 
-done:
 	for {
 		for _, elem := range w {
 			switch state {
@@ -190,7 +189,7 @@ done:
 					state = leadingzero
 				} else {
 					// error
-					return -1
+					return 0
 				}
 			case anydigit1:
 				if elem >= '0' && elem <= '9' {
@@ -207,13 +206,13 @@ done:
 					state = exponent
 					break
 				}
-				break done
+				return pos // finished.
 			case decimal:
 				if elem >= '0' && elem <= '9' {
 					state = anydigit2
 				} else {
 					// error
-					return -1
+					return 0
 				}
 			case anydigit2:
 				if elem >= '0' && elem <= '9' {
@@ -223,7 +222,6 @@ done:
 					state = exponent
 					break
 				}
-				s.pos = pos
 				return pos // finished.
 			case exponent:
 				if elem == '+' || elem == '-' {
@@ -237,10 +235,10 @@ done:
 					break
 				}
 				// error
-				return -1
+				return 0
 			case anydigit3:
 				if elem < '0' || elem > '9' {
-					break done
+					return pos
 				}
 			}
 			pos++
@@ -252,16 +250,14 @@ done:
 			// sure we are in a state that allows ending the number.
 			switch state {
 			case leadingzero, anydigit1, anydigit2, anydigit3:
-				break done
+				return pos
 			default:
 				// error otherwise, the number isn't complete.
-				return -1
+				return 0
 			}
 		}
 		w = s.br.window(pos)
 	}
-	s.pos = pos
-	return pos // finished.
 }
 
 // Error returns the first error encountered.
