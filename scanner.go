@@ -61,104 +61,100 @@ var whitespace = [256]bool{
 //  -, 0-9 A number
 func (s *Scanner) Next() []byte {
 	s.br.release(s.pos)
-	w := s.br.window()
-	pos := 0
-	for {
-		for _, c := range w {
-			// strip any leading whitespace.
-			if whitespace[c] {
-				pos++
-				continue
-			}
-			length := 0
-			s.br.release(pos)
-			switch c {
-			case ObjectStart, ObjectEnd, Colon, Comma, ArrayStart, ArrayEnd:
-				length = 1
-				s.pos = 1
-			case True:
-				length = validateToken(&s.br, "true")
-				s.pos = length
-			case False:
-				length = validateToken(&s.br, "false")
-				s.pos = length
-			case Null:
-				length = validateToken(&s.br, "null")
-				s.pos = length
-			case String:
-				// string
-				length = parseString(&s.br)
-				if length < 2 {
-					return nil
-				}
-				s.pos = length
-			default:
-				// ensure the number is correct.
-				length = s.parseNumber()
-				if length < 0 {
-					return nil
-				}
-			}
-			return s.br.window()[:length]
+	w := s.br.window(0)
+loop:
+	for pos, c := range w {
+		// strip any leading whitespace.
+		if whitespace[c] {
+			continue
 		}
-		// If no data is left, we need to extend
-		if s.br.extend() == 0 {
-			// eof
-			return nil
+
+		// simple case
+		switch c {
+		case ObjectStart, ObjectEnd, Colon, Comma, ArrayStart, ArrayEnd:
+			s.pos = pos + 1
+			return w[pos:s.pos]
 		}
-		w = s.br.window()[pos:]
+
+		s.br.release(pos)
+		switch c {
+		case True:
+			s.pos = validateToken(&s.br, "true")
+		case False:
+			s.pos = validateToken(&s.br, "false")
+		case Null:
+			s.pos = validateToken(&s.br, "null")
+		case String:
+			if s.parseString() < 2 {
+				return nil
+			}
+		default:
+			// ensure the number is correct.
+			if s.parseNumber() < 0 {
+				return nil
+			}
+		}
+		return s.br.window(0)[:s.pos]
 	}
+
+	// it's all whitespace, ignore it
+	s.br.release(len(w))
+
+	// refill buffer
+	if s.br.extend() == 0 {
+		// eof
+		return nil
+	}
+	w = s.br.window(0)
+	goto loop
 }
 
 func validateToken(br *byteReader, expected string) int {
 	n := len(expected)
-	w := br.window()
-	for {
-		if n <= len(w) {
-			if string(w[:n]) != expected {
-				// doesn't match
-				return 0
-			}
-			return n
-		}
-		// If no data is left, we need to extend
+loop:
+	w := br.window(0)
+	if n > len(w) {
+		// not enough data is left, we need to extend
 		if br.extend() == 0 {
 			// eof
 			return 0
 		}
-		w = br.window()
+		goto loop
 	}
+	if string(w[:n]) != expected {
+		// doesn't match
+		return 0
+	}
+	return n
 }
 
 // parseString returns the length of the string token
 // located at the start of the window or 0 if there is no closing
 // " before the end of the byteReader.
-func parseString(br *byteReader) int {
-	pos := 1
+func (s *Scanner) parseString() int {
 	escaped := false
-	w := br.window()[pos:]
+	w := s.br.window(1)
+	pos := 0
 	for {
 		for _, c := range w {
 			pos++
-			switch escaped {
-			case true:
+			switch {
+			case escaped:
 				escaped = false
-			case false:
-				if c == '\\' {
-					escaped = true
-				}
-				if c == '"' {
-					// finished
-					return pos
-				}
+			case c == '"':
+				// finished
+				s.pos = pos + 1
+				return s.pos
+			case c == '\\':
+				escaped = true
 			}
 		}
 		// need more data from the pipe
-		if br.extend() == 0 {
+		if s.br.extend() == 0 {
 			// EOF.
-			return -1
+			return 0
 		}
-		w = br.window()[pos:]
+		w = s.br.window(pos + 1)
 	}
 }
 
@@ -176,7 +172,7 @@ func (s *Scanner) parseNumber() int {
 	)
 
 	pos := 0
-	w := s.br.window()
+	w := s.br.window(0)
 	// int vs uint8 costs 10% on canada.json
 	var state uint8 = begin
 	for {
@@ -268,7 +264,7 @@ func (s *Scanner) parseNumber() int {
 				return -1
 			}
 		}
-		w = s.br.window()[pos:]
+		w = s.br.window(pos)
 	}
 }
 
