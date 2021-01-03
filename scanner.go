@@ -90,9 +90,7 @@ loop:
 			}
 		default:
 			// ensure the number is correct.
-			if s.parseNumber() < 0 {
-				return nil
-			}
+			s.pos = s.parseNumber(c)
 		}
 		return s.br.window(0)[:s.pos]
 	}
@@ -110,22 +108,22 @@ loop:
 }
 
 func validateToken(br *byteReader, expected string) int {
-	n := len(expected)
-loop:
-	w := br.window(0)
-	if n > len(w) {
+	for {
+		w := br.window(0)
+		n := len(expected)
+		if len(w) >= n {
+			if string(w[:n]) != expected {
+				// doesn't match
+				return 0
+			}
+			return n
+		}
 		// not enough data is left, we need to extend
 		if br.extend() == 0 {
 			// eof
 			return 0
 		}
-		goto loop
 	}
-	if string(w[:n]) != expected {
-		// doesn't match
-		return 0
-	}
-	return n
 }
 
 // parseString returns the length of the string token
@@ -158,10 +156,9 @@ func (s *Scanner) parseString() int {
 	}
 }
 
-func (s *Scanner) parseNumber() int {
+func (s *Scanner) parseNumber(c byte) int {
 	const (
 		begin = iota
-		sign
 		leadingzero
 		anydigit1
 		decimal
@@ -175,25 +172,24 @@ func (s *Scanner) parseNumber() int {
 	w := s.br.window(0)
 	// int vs uint8 costs 10% on canada.json
 	var state uint8 = begin
+
+	// handle the case that the first character is a hyphen
+	if c == '-' {
+		pos++
+		w = s.br.window(1)
+	}
+
 	for {
 		for _, elem := range w {
 			switch state {
 			case begin:
-				// only accept sign or digit
-				if elem == '-' {
-					state = sign
-					break
-				}
-				fallthrough
-			case sign:
-				switch elem {
-				case '0':
-					state = leadingzero
-				case '1', '2', '3', '4', '5', '6', '7', '8', '9':
+				if elem >= '1' && elem <= '9' {
 					state = anydigit1
-				default:
+				} else if elem == '0' {
+					state = leadingzero
+				} else {
 					// error
-					return -1
+					return 0
 				}
 			case anydigit1:
 				if elem >= '0' && elem <= '9' {
@@ -202,32 +198,31 @@ func (s *Scanner) parseNumber() int {
 				}
 				fallthrough
 			case leadingzero:
-				switch elem {
-				case '.':
+				if elem == '.' {
 					state = decimal
-				case 'e', 'E':
-					state = exponent
-				default:
-					s.pos = pos
-					return pos // finished
+					break
 				}
+				if elem == 'e' || elem == 'E' {
+					state = exponent
+					break
+				}
+				return pos // finished.
 			case decimal:
 				if elem >= '0' && elem <= '9' {
 					state = anydigit2
 				} else {
 					// error
-					return -1
+					return 0
 				}
 			case anydigit2:
-				switch elem {
-				case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
+				if elem >= '0' && elem <= '9' {
 					break
-				case 'e', 'E':
-					state = exponent
-				default:
-					s.pos = pos
-					return pos // finished
 				}
+				if elem == 'e' || elem == 'E' {
+					state = exponent
+					break
+				}
+				return pos // finished.
 			case exponent:
 				if elem == '+' || elem == '-' {
 					state = expsign
@@ -237,16 +232,14 @@ func (s *Scanner) parseNumber() int {
 			case expsign:
 				if elem >= '0' && elem <= '9' {
 					state = anydigit3
-				} else {
-					// error
-					return -1
-				}
-			case anydigit3:
-				if elem >= '0' && elem <= '9' {
 					break
 				}
-				s.pos = pos
-				return pos // finished
+				// error
+				return 0
+			case anydigit3:
+				if elem < '0' || elem > '9' {
+					return pos
+				}
 			}
 			pos++
 		}
@@ -257,11 +250,10 @@ func (s *Scanner) parseNumber() int {
 			// sure we are in a state that allows ending the number.
 			switch state {
 			case leadingzero, anydigit1, anydigit2, anydigit3:
-				s.pos = pos
-				return pos // finished.
+				return pos
 			default:
 				// error otherwise, the number isn't complete.
-				return -1
+				return 0
 			}
 		}
 		w = s.br.window(pos)
