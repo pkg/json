@@ -10,6 +10,13 @@ import (
 	"unsafe"
 )
 
+// A Decoder decodes JSON values from an input stream.
+type Decoder struct {
+	scanner Scanner
+	state   func(*Decoder) ([]byte, error)
+	stack
+}
+
 // NewDecoder returns a new Decoder for the supplied Reader r.
 func NewDecoder(r io.Reader) *Decoder {
 	return NewDecoderBuffer(r, make([]byte, 8192))
@@ -44,13 +51,6 @@ func (s *stack) pop() bool {
 }
 
 func (s *stack) len() int { return len(*s) }
-
-// A Decoder decodes JSON values from an input stream.
-type Decoder struct {
-	scanner Scanner
-	state   func(*Decoder) ([]byte, error)
-	stack
-}
 
 // Token returns the next JSON token in the input stream.
 // At the end of the input stream, Token returns nil, io.EOF.
