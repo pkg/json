@@ -82,7 +82,7 @@ func (d *Decoder) Token() (json.Token, error) {
 	case '"':
 		return string(tok[1 : len(tok)-1]), nil
 	default:
-		return strconv.ParseFloat(string(tok), 64)
+		return strconv.ParseFloat(bytesToString(tok), 64)
 	}
 }
 
