@@ -90,7 +90,7 @@ loop:
 			}
 		default:
 			// ensure the number is correct.
-			s.pos = s.parseNumber(c)
+			s.pos = s.parseNumber()
 		}
 		return s.br.window(0)[:s.pos]
 	}
@@ -156,108 +156,97 @@ func (s *Scanner) parseString() int {
 	}
 }
 
-func (s *Scanner) parseNumber(c byte) int {
-	const (
-		begin = iota
-		leadingzero
-		anydigit1
-		decimal
-		anydigit2
-		exponent
-		expsign
-		anydigit3
-	)
+func (s *Scanner) parseNumber() int {
+	var nd, i int
+	var sawdot, sawe bool
+	var buf = s.br.window(0)
 
-	pos := 0
-	w := s.br.window(0)
-	// int vs uint8 costs 10% on canada.json
-	var state uint8 = begin
-
-	// handle the case that the first character is a hyphen
-	if c == '-' {
-		pos++
-		w = s.br.window(1)
+	// index 0 is guarenteed to be valid
+	if buf[i] == '-' {
+		i++
 	}
 
+loop:
 	for {
-		for _, elem := range w {
-			switch state {
-			case begin:
-				if elem >= '1' && elem <= '9' {
-					state = anydigit1
-				} else if elem == '0' {
-					state = leadingzero
-				} else {
-					// error
-					return 0
-				}
-			case anydigit1:
-				if elem >= '0' && elem <= '9' {
-					// stay in this state
-					break
-				}
-				fallthrough
-			case leadingzero:
-				if elem == '.' {
-					state = decimal
-					break
-				}
-				if elem == 'e' || elem == 'E' {
-					state = exponent
-					break
-				}
-				return pos // finished.
-			case decimal:
-				if elem >= '0' && elem <= '9' {
-					state = anydigit2
-				} else {
-					// error
-					return 0
-				}
-			case anydigit2:
-				if elem >= '0' && elem <= '9' {
-					break
-				}
-				if elem == 'e' || elem == 'E' {
-					state = exponent
-					break
-				}
-				return pos // finished.
-			case exponent:
-				if elem == '+' || elem == '-' {
-					state = expsign
-					break
-				}
-				fallthrough
-			case expsign:
-				if elem >= '0' && elem <= '9' {
-					state = anydigit3
-					break
-				}
-				// error
-				return 0
-			case anydigit3:
-				if elem < '0' || elem > '9' {
-					return pos
-				}
+		for ; i < len(buf); i++ {
+			switch c := buf[i]; true {
+			case '0' <= c && c <= '9':
+				nd++
+				continue
+			case c == '.':
+				i++
+				sawdot = true
 			}
-			pos++
+			break loop
 		}
-
 		// need more data from the pipe
 		if s.br.extend() == 0 {
-			// end of the item. However, not necessarily an error. Make
-			// sure we are in a state that allows ending the number.
-			switch state {
-			case leadingzero, anydigit1, anydigit2, anydigit3:
-				return pos
-			default:
-				// error otherwise, the number isn't complete.
-				return 0
-			}
+			break loop
 		}
-		w = s.br.window(pos)
+		buf = s.br.window(0)
 	}
+	if nd == 0 {
+		return 0
+	}
+	if sawdot {
+		nd = 0
+	loop1:
+		for {
+			for ; i < len(buf); i++ {
+				switch c := buf[i]; true {
+				case '0' <= c && c <= '9':
+					nd++
+					continue
+				case lower(c) == 'e':
+					i++
+					sawe = true
+				}
+				break loop1
+			}
+			// need more data from the pipe
+			if s.br.extend() == 0 {
+				break loop1
+			}
+			buf = s.br.window(0)
+		}
+		if nd == 0 {
+			return 0
+		}
+	}
+
+	if sawe {
+		nd = 0
+	loop2:
+		for {
+			for ; i < len(buf); i++ {
+				switch c := buf[i]; true {
+				case c == '+' || c == '-':
+					continue
+				case '0' <= c && c <= '9':
+					nd++
+					continue
+				}
+				break loop2
+			}
+			// need more data from the pipe
+			if s.br.extend() == 0 {
+				break loop2
+			}
+			buf = s.br.window(0)
+		}
+		if nd == 0 {
+			return 0
+		}
+	}
+	return i
+}
+
+// lower(c) is a lower-case letter if and only if
+// c is either that lower-case letter or the equivalent upper-case letter.
+// Instead of writing c == 'x' || c == 'X' one can write lower(c) == 'x'.
+// Note that lower of non-letters can produce other non-letters.
+func lower(c byte) byte {
+	return c | ('x' - 'X')
 }
 
 // Error returns the first error encountered.

@@ -1,6 +1,7 @@
 package json
 
 import (
+	"fmt"
 	"io"
 	"strings"
 	"testing"
@@ -97,6 +98,7 @@ func testParseString(t *testing.T, json, want string) {
 }
 
 func TestParseNumber(t *testing.T) {
+	testParseNumber(t, `0`)
 	testParseNumber(t, `1`)
 	// testParseNumber(t, `0000001`)
 	testParseNumber(t, `12.0004`)
@@ -111,6 +113,8 @@ func TestParseNumber(t *testing.T) {
 	testParseNumber(t, `-18.3872`)
 	testParseNumber(t, `-2.1`)
 	testParseNumber(t, `-1234567.891011121314`)
+	testParseNumber(t, `-1234567.8e90`)
+	testParseNumber(t, `-1.50139930144708198E19`)
 }
 
 func testParseNumber(t *testing.T, tc string) {
@@ -154,7 +158,8 @@ func BenchmarkParseNumber(b *testing.B) {
 						r:    r,
 					},
 				}
-				n := scanner.parseNumber(scanner.br.window(0)[0])
+				scanner.br.extend()
+				n := scanner.parseNumber()
 				if n != len(tc) {
 					b.Fatalf("failed")
 				}
@@ -178,7 +183,7 @@ func testScanner(t *testing.T, sz int) {
 	buf := make([]byte, sz)
 	for _, tc := range inputs {
 		r := fixture(t, tc.path)
-		t.Run(tc.path, func(t *testing.T) {
+		t.Run(fmt.Sprintf("%s/%d", tc.path, sz), func(t *testing.T) {
 			sc := &Scanner{
 				br: byteReader{
 					data: buf[:0],
@@ -186,7 +191,11 @@ func testScanner(t *testing.T, sz int) {
 				},
 			}
 			n := 0
-			for len(sc.Next()) > 0 {
+			for {
+				next := sc.Next()
+				if len(next) < 1 {
+					break
+				}
 				n++
 			}
 			if n != tc.alltokens {

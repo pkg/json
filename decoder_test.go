@@ -87,6 +87,7 @@ func TestDecoderInvalidJSON(t *testing.T) {
 		{json: `--123`},
 		{json: `.1`},
 		{json: `0.1e`},
+		{json: `001`},
 		// fuzz testing
 		// {json: "\"\x00outC: .| >\x185\x014\x80\x00\x01n" +
 		//	"E4255425067\x014\x80\x00\x01.242" +
