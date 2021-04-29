@@ -154,6 +154,7 @@ func BenchmarkParseNumber(b *testing.B) {
 						r:    r,
 					},
 				}
+				scanner.Next()
 				n := scanner.parseNumber(scanner.br.window(0)[0])
 				if n != len(tc) {
 					b.Fatalf("failed")
