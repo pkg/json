@@ -201,6 +201,10 @@ func TestDecoderDecode(t *testing.T) {
 		},
 	})
 
+	// Object key with backslashes
+	decode(`{"a\"b":0}`, &any)
+	assert(any, map[string]interface{}{`a"b`: 0.0})
+
 	ms := make(map[string]string)
 	decode(`{"hello": "world"}`, &ms)
 	assert(ms, map[string]string{
