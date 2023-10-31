@@ -1,0 +1,92 @@
+run:
+  go: '1.21'
+
+linters:
+  enable-all: true
+  disable:
+    - bodyclose
+    - containedctx
+    - contextcheck
+    - cyclop
+    - deadcode # replaced with unused
+    - depguard # too annoying
+    - dupl
+    - dupword
+    - errcheck
+    - errchkjson
+    - errname
+    - errorlint
+    - exhaustivestruct # Replaced by exhaustruct.
+    - exhaustruct
+    - exhaustive # too annoying, too hard to disable with comments
+    - forbidigo
+    - funlen
+    - gci
+    - gochecknoglobals
+    - gocognit
+    - goconst
+    - gocritic
+    - gocyclo
+    - godot
+    - godox
+    - goerr113
+    - gofumpt
+    - golint # Replaced by revive.
+    - gomnd
+    - ifshort
+    - inamedparam # too opinionated
+    - interfacer # deprecated
+    - ireturn
+    - lll
+    - maintidx
+    - maligned # Replaced by govet
+    - musttag # flaky, fires on structs which aren't JSON marshalled
+    - nlreturn
+    - noctx
+    - nonamedreturns
+    - nosnakecase
+    - paralleltest
+    - prealloc
+    - rowserrcheck # disabled because of generics https://github.com/golangci/golangci-lint/issues/2649.
+    - scopelint # Replaced by exportloopref.
+    - sqlclosecheck # disabled because of generics https://github.com/golangci/golangci-lint/issues/2649.
+    - structcheck # replaced with unused
+    - tagliatelle
+    - tagalign # too fussy
+    - testpackage # too annoying
+    - thelper
+    - usestdlibvars
+    - varcheck # Replaced by unused.
+    - varnamelen
+    - wastedassign # disabled because of generics
+    - whitespace
+    - wrapcheck
+    - wsl
+
+linters-settings:
+  gofumpt:
+    module-path: github.com/pkg/json
+  gosec:
+    excludes:
+    - G112 # Potential slowloris attack
+    - G114 # Use of net/http serve function that has no support for setting timeouts
+    - G404 # Insecure random number source (rand)
+  revive:
+    rules:
+    - name: var-naming
+      disabled: true
+  stylecheck:
+    checks: [
+      "all",
+      "-ST1003",
+      "-ST1012"
+    ]
+  unparam:
+    check-exported: false
+  usestdlibvars:
+    http-method: false
+    http-status-code: false
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0

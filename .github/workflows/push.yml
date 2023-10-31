@@ -23,9 +23,5 @@ jobs:
       run: go test ./...
     - name: Vet 
       run: go vet ./...
-    - name: Staticcheck
-      run: |
-        go get honnef.co/go/tools/cmd/staticcheck
-        staticcheck ./...
     - name: Format
       run: diff -u <(echo -n) <(gofmt -d .)
