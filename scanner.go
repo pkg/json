@@ -48,17 +48,17 @@ var whitespace = [256]bool{
 //
 // A valid token begins with one of the following:
 //
-//  { Object start
-//  [ Array start
-//  } Object end
-//  ] Array End
-//  , Literal comma
-//  : Literal colon
-//  t JSON true
-//  f JSON false
-//  n JSON null
-//  " A string, possibly containing backslash escaped entites.
-//  -, 0-9 A number
+//	{ Object start
+//	[ Array start
+//	} Object end
+//	] Array End
+//	, Literal comma
+//	: Literal colon
+//	t JSON true
+//	f JSON false
+//	n JSON null
+//	" A string, possibly containing backslash escaped entites.
+//	-, 0-9 A number
 func (s *Scanner) Next() []byte {
 	s.br.release(s.pos)
 	w := s.br.window(0)
