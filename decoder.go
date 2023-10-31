@@ -64,7 +64,7 @@ func (s *stack) len() int { return len(*s) }
 // to mark the start and end of arrays and objects.
 // Commas and colons are elided.
 //
-// Note: this API is provided for compatability with the encoding/json
+// Note: this API is provided for compatibility with the encoding/json
 // package and carries a significant allocation cost. See NextToken for
 // a more efficient API.
 func (d *Decoder) Token() (json.Token, error) {

@@ -4,11 +4,10 @@ import (
 	"bytes"
 	"compress/gzip"
 	"encoding/json"
-	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -69,7 +68,7 @@ func BenchmarkBufferSize(b *testing.B) {
 		b.Run(tc.path, func(b *testing.B) {
 			for _, sz := range sizes {
 				buf := make([]byte, sz)
-				b.Run(fmt.Sprint(sz), func(b *testing.B) {
+				b.Run(strconv.Itoa(sz), func(b *testing.B) {
 					b.ReportAllocs()
 					b.SetBytes(r.Size())
 					b.ResetTimer()
@@ -257,7 +256,7 @@ func fixture(tb testing.TB, path string) *bytes.Reader {
 	defer f.Close()
 	gz, err := gzip.NewReader(f)
 	check(tb, err)
-	buf, err := ioutil.ReadAll(gz)
+	buf, err := io.ReadAll(gz)
 	check(tb, err)
 	return bytes.NewReader(buf)
 }
