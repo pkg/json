@@ -96,15 +96,15 @@ func (d *Decoder) Token() (json.Token, error) {
 //
 // A valid token begins with one of the following:
 //
-//    { Object start
-//    [ Array start
-//    } Object end
-//    ] Array End
-//    t JSON true
-//    f JSON false
-//    n JSON null
-//    " A string, possibly containing backslash escaped entites.
-//    -, 0-9 A number
+//	{ Object start
+//	[ Array start
+//	} Object end
+//	] Array End
+//	t JSON true
+//	f JSON false
+//	n JSON null
+//	" A string, possibly containing backslash escaped entites.
+//	-, 0-9 A number
 //
 // Commas and colons are elided.
 func (d *Decoder) NextToken() ([]byte, error) {
@@ -514,7 +514,5 @@ func (d *Decoder) decodeSliceAny() ([]interface{}, error) {
 }
 
 func bytesToString(b []byte) string {
-	sliceHeader := (*reflect.SliceHeader)(unsafe.Pointer(&b))
-	stringHeader := reflect.StringHeader{Data: sliceHeader.Data, Len: sliceHeader.Len}
-	return *(*string)(unsafe.Pointer(&stringHeader))
+	return unsafe.String(unsafe.SliceData(b), len(b))
 }
