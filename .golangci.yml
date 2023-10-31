@@ -4,6 +4,7 @@ run:
 linters:
   enable-all: true
   disable:
+    - asasalint
     - bodyclose
     - containedctx
     - contextcheck
@@ -41,15 +42,14 @@ linters:
     - maintidx
     - maligned # Replaced by govet
     - musttag # flaky, fires on structs which aren't JSON marshalled
+    - nilnil
     - nlreturn
     - noctx
     - nonamedreturns
     - nosnakecase
     - paralleltest
     - prealloc
-    - rowserrcheck # disabled because of generics https://github.com/golangci/golangci-lint/issues/2649.
     - scopelint # Replaced by exportloopref.
-    - sqlclosecheck # disabled because of generics https://github.com/golangci/golangci-lint/issues/2649.
     - structcheck # replaced with unused
     - tagliatelle
     - tagalign # too fussy
@@ -58,7 +58,6 @@ linters:
     - usestdlibvars
     - varcheck # Replaced by unused.
     - varnamelen
-    - wastedassign # disabled because of generics
     - whitespace
     - wrapcheck
     - wsl
@@ -66,11 +65,6 @@ linters:
 linters-settings:
   gofumpt:
     module-path: github.com/pkg/json
-  gosec:
-    excludes:
-    - G112 # Potential slowloris attack
-    - G114 # Use of net/http serve function that has no support for setting timeouts
-    - G404 # Insecure random number source (rand)
   revive:
     rules:
     - name: var-naming
@@ -83,9 +77,6 @@ linters-settings:
     ]
   unparam:
     check-exported: false
-  usestdlibvars:
-    http-method: false
-    http-status-code: false
 
 issues:
   max-issues-per-linter: 0
