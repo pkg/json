@@ -176,7 +176,7 @@ func (s *Scanner) parseNumber(c byte) int {
 	// handle the case that the first character is a hyphen
 	if c == '-' {
 		pos++
-		w = s.br.window()[1:] // TODO - can we subslice w here?
+		w = w[1:]
 	}
 
 	for {
