@@ -79,11 +79,11 @@ func (s *Scanner) Next() []byte {
 			s.br.release(pos)
 			switch c {
 			case True:
-				s.offset = validateToken(&s.br, "true")
+				s.offset = s.validateToken("true")
 			case False:
-				s.offset = validateToken(&s.br, "false")
+				s.offset = s.validateToken("false")
 			case Null:
-				s.offset = validateToken(&s.br, "null")
+				s.offset = s.validateToken("null")
 			case String:
 				if s.parseString() < 2 {
 					return nil
@@ -107,9 +107,9 @@ func (s *Scanner) Next() []byte {
 	}
 }
 
-func validateToken(br *byteReader, expected string) int {
+func (s *Scanner) validateToken(expected string) int {
 	for {
-		w := br.window()
+		w := s.br.window()
 		n := len(expected)
 		if len(w) >= n {
 			if string(w[:n]) != expected {
@@ -119,7 +119,7 @@ func validateToken(br *byteReader, expected string) int {
 			return n
 		}
 		// not enough data is left, we need to extend
-		if br.extend() == 0 {
+		if s.br.extend() == 0 {
 			// eof
 			return 0
 		}
