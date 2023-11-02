@@ -68,10 +68,3 @@ func (b *byteReader) compact() {
 	copy(b.data, b.data[b.offset:])
 	b.offset = 0
 }
-
-func max(a, b int) int {
-	if a > b {
-		return a
-	}
-	return b
-}
