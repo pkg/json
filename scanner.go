@@ -62,49 +62,49 @@ var whitespace = [256]bool{
 func (s *Scanner) Next() []byte {
 	s.br.release(s.offset)
 	w := s.br.window()
-loop:
-	for pos, c := range w {
-		// strip any leading whitespace.
-		if whitespace[c] {
-			continue
-		}
-
-		// simple case
-		switch c {
-		case ObjectStart, ObjectEnd, Colon, Comma, ArrayStart, ArrayEnd:
-			s.offset = pos + 1
-			return w[pos:s.offset]
-		}
-
-		s.br.release(pos)
-		switch c {
-		case True:
-			s.offset = validateToken(&s.br, "true")
-		case False:
-			s.offset = validateToken(&s.br, "false")
-		case Null:
-			s.offset = validateToken(&s.br, "null")
-		case String:
-			if s.parseString() < 2 {
-				return nil
+	for {
+		for pos, c := range w {
+			// strip any leading whitespace.
+			if whitespace[c] {
+				continue
 			}
-		default:
-			// ensure the number is correct.
-			s.offset = s.parseNumber(c)
+
+			// simple case
+			switch c {
+			case ObjectStart, ObjectEnd, Colon, Comma, ArrayStart, ArrayEnd:
+				s.offset = pos + 1
+				return w[pos:s.offset]
+			}
+
+			s.br.release(pos)
+			switch c {
+			case True:
+				s.offset = validateToken(&s.br, "true")
+			case False:
+				s.offset = validateToken(&s.br, "false")
+			case Null:
+				s.offset = validateToken(&s.br, "null")
+			case String:
+				if s.parseString() < 2 {
+					return nil
+				}
+			default:
+				// ensure the number is correct.
+				s.offset = s.parseNumber(c)
+			}
+			return s.br.window()[:s.offset]
 		}
-		return s.br.window()[:s.offset]
-	}
 
-	// it's all whitespace, ignore it
-	s.br.release(len(w))
+		// it's all whitespace, ignore it
+		s.br.release(len(w))
 
-	// refill buffer
-	if s.br.extend() == 0 {
-		// eof
-		return nil
+		// refill buffer
+		if s.br.extend() == 0 {
+			// eof
+			return nil
+		}
+		w = s.br.window()
 	}
-	w = s.br.window()
-	goto loop
 }
 
 func validateToken(br *byteReader, expected string) int {
