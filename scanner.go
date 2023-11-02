@@ -176,11 +176,10 @@ func (s *Scanner) parseNumber(c byte) int {
 	// handle the case that the first character is a hyphen
 	if c == '-' {
 		offset++
-		w = w[1:]
 	}
 
 	for {
-		for _, elem := range w {
+		for _, elem := range w[offset:] {
 			switch state {
 			case begin:
 				if elem >= '1' && elem <= '9' {
@@ -256,7 +255,7 @@ func (s *Scanner) parseNumber(c byte) int {
 				return 0
 			}
 		}
-		w = s.br.window()[offset:]
+		w = s.br.window()
 	}
 }
 
