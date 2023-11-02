@@ -30,8 +30,8 @@ func NewScanner(r io.Reader) *Scanner {
 
 // Scanner implements a JSON scanner as defined in RFC 7159.
 type Scanner struct {
-	br  byteReader
-	pos int
+	br     byteReader
+	offset int
 }
 
 var whitespace = [256]bool{
@@ -60,7 +60,7 @@ var whitespace = [256]bool{
 //	" A string, possibly containing backslash escaped entites.
 //	-, 0-9 A number
 func (s *Scanner) Next() []byte {
-	s.br.release(s.pos)
+	s.br.release(s.offset)
 	w := s.br.window()
 loop:
 	for pos, c := range w {
@@ -72,27 +72,27 @@ loop:
 		// simple case
 		switch c {
 		case ObjectStart, ObjectEnd, Colon, Comma, ArrayStart, ArrayEnd:
-			s.pos = pos + 1
-			return w[pos:s.pos]
+			s.offset = pos + 1
+			return w[pos:s.offset]
 		}
 
 		s.br.release(pos)
 		switch c {
 		case True:
-			s.pos = validateToken(&s.br, "true")
+			s.offset = validateToken(&s.br, "true")
 		case False:
-			s.pos = validateToken(&s.br, "false")
+			s.offset = validateToken(&s.br, "false")
 		case Null:
-			s.pos = validateToken(&s.br, "null")
+			s.offset = validateToken(&s.br, "null")
 		case String:
 			if s.parseString() < 2 {
 				return nil
 			}
 		default:
 			// ensure the number is correct.
-			s.pos = s.parseNumber(c)
+			s.offset = s.parseNumber(c)
 		}
-		return s.br.window()[:s.pos]
+		return s.br.window()[:s.offset]
 	}
 
 	// it's all whitespace, ignore it
@@ -132,17 +132,17 @@ func validateToken(br *byteReader, expected string) int {
 func (s *Scanner) parseString() int {
 	escaped := false
 	w := s.br.window()[1:]
-	pos := 0
+	offset := 0
 	for {
 		for _, c := range w {
-			pos++
+			offset++
 			switch {
 			case escaped:
 				escaped = false
 			case c == '"':
 				// finished
-				s.pos = pos + 1
-				return s.pos
+				s.offset = offset + 1
+				return s.offset
 			case c == '\\':
 				escaped = true
 			}
@@ -152,7 +152,7 @@ func (s *Scanner) parseString() int {
 			// EOF.
 			return 0
 		}
-		w = s.br.window()[pos+1:]
+		w = s.br.window()[offset+1:]
 	}
 }
 
@@ -168,14 +168,14 @@ func (s *Scanner) parseNumber(c byte) int {
 		anydigit3
 	)
 
-	pos := 0
+	offset := 0
 	w := s.br.window()
 	// int vs uint8 costs 10% on canada.json
 	var state uint8 = begin
 
 	// handle the case that the first character is a hyphen
 	if c == '-' {
-		pos++
+		offset++
 		w = w[1:]
 	}
 
@@ -206,7 +206,7 @@ func (s *Scanner) parseNumber(c byte) int {
 					state = exponent
 					break
 				}
-				return pos // finished.
+				return offset // finished.
 			case decimal:
 				if elem >= '0' && elem <= '9' {
 					state = anydigit2
@@ -222,7 +222,7 @@ func (s *Scanner) parseNumber(c byte) int {
 					state = exponent
 					break
 				}
-				return pos // finished.
+				return offset // finished.
 			case exponent:
 				if elem == '+' || elem == '-' {
 					state = expsign
@@ -238,10 +238,10 @@ func (s *Scanner) parseNumber(c byte) int {
 				return 0
 			case anydigit3:
 				if elem < '0' || elem > '9' {
-					return pos
+					return offset
 				}
 			}
-			pos++
+			offset++
 		}
 
 		// need more data from the pipe
@@ -250,13 +250,13 @@ func (s *Scanner) parseNumber(c byte) int {
 			// sure we are in a state that allows ending the number.
 			switch state {
 			case leadingzero, anydigit1, anydigit2, anydigit3:
-				return pos
+				return offset
 			default:
 				// error otherwise, the number isn't complete.
 				return 0
 			}
 		}
-		w = s.br.window()[pos:]
+		w = s.br.window()[offset:]
 	}
 }
 
