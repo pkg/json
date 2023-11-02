@@ -29,7 +29,7 @@ func BenchmarkCountWhitespace(b *testing.B) {
 
 func countWhitespace(br *byteReader) int {
 	n := 0
-	w := br.window(0)
+	w := br.window()
 	for {
 		for _, c := range w {
 			if whitespace[c] {
@@ -40,6 +40,6 @@ func countWhitespace(br *byteReader) int {
 		if br.extend() == 0 {
 			return n
 		}
-		w = br.window(0)
+		w = br.window()
 	}
 }

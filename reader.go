@@ -17,8 +17,8 @@ func (b *byteReader) release(n int) {
 
 // window returns the current window.
 // The window is invalidated by calls to release or extend.
-func (b *byteReader) window(offset int) []byte {
-	return b.data[b.offset+offset:]
+func (b *byteReader) window() []byte {
+	return b.data[b.offset:]
 }
 
 // tuning constants for byteReader.extend.

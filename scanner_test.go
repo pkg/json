@@ -155,7 +155,7 @@ func BenchmarkParseNumber(b *testing.B) {
 					},
 				}
 				scanner.br.extend()
-				n := scanner.parseNumber(scanner.br.window(0)[0])
+				n := scanner.parseNumber(scanner.br.window()[0])
 				if n != len(tc) {
 					b.Fatalf("expected: %v, got: %v", len(tc), n)
 				}

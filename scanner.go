@@ -61,7 +61,7 @@ var whitespace = [256]bool{
 //	-, 0-9 A number
 func (s *Scanner) Next() []byte {
 	s.br.release(s.pos)
-	w := s.br.window(0)
+	w := s.br.window()
 loop:
 	for pos, c := range w {
 		// strip any leading whitespace.
@@ -92,7 +92,7 @@ loop:
 			// ensure the number is correct.
 			s.pos = s.parseNumber(c)
 		}
-		return s.br.window(0)[:s.pos]
+		return s.br.window()[:s.pos]
 	}
 
 	// it's all whitespace, ignore it
@@ -103,13 +103,13 @@ loop:
 		// eof
 		return nil
 	}
-	w = s.br.window(0)
+	w = s.br.window()
 	goto loop
 }
 
 func validateToken(br *byteReader, expected string) int {
 	for {
-		w := br.window(0)
+		w := br.window()
 		n := len(expected)
 		if len(w) >= n {
 			if string(w[:n]) != expected {
@@ -131,7 +131,7 @@ func validateToken(br *byteReader, expected string) int {
 // " before the end of the byteReader.
 func (s *Scanner) parseString() int {
 	escaped := false
-	w := s.br.window(1)
+	w := s.br.window()[1:]
 	pos := 0
 	for {
 		for _, c := range w {
@@ -152,7 +152,7 @@ func (s *Scanner) parseString() int {
 			// EOF.
 			return 0
 		}
-		w = s.br.window(pos + 1)
+		w = s.br.window()[pos+1:]
 	}
 }
 
@@ -169,14 +169,14 @@ func (s *Scanner) parseNumber(c byte) int {
 	)
 
 	pos := 0
-	w := s.br.window(0)
+	w := s.br.window()
 	// int vs uint8 costs 10% on canada.json
 	var state uint8 = begin
 
 	// handle the case that the first character is a hyphen
 	if c == '-' {
 		pos++
-		w = s.br.window(1)
+		w = s.br.window()[1:] // TODO - can we subslice w here?
 	}
 
 	for {
@@ -256,7 +256,7 @@ func (s *Scanner) parseNumber(c byte) int {
 				return 0
 			}
 		}
-		w = s.br.window(pos)
+		w = s.br.window()[pos:]
 	}
 }
 
