@@ -279,7 +279,7 @@ func (d *Decoder) stateEnd() ([]byte, error) { return nil, io.EOF }
 
 // Decode reads the next JSON-encoded value from its input and stores it
 // in the value pointed to by v.
-func (d *Decoder) Decode(v interface{}) error {
+func (d *Decoder) Decode(v any) error {
 	rv := reflect.ValueOf(v)
 	switch {
 	case rv.Kind() != reflect.Ptr:
@@ -404,7 +404,7 @@ func (d *Decoder) decodeValue(v reflect.Value) error {
 	}
 }
 
-func (d *Decoder) decodeValueAny() (interface{}, error) {
+func (d *Decoder) decodeValueAny() (any, error) {
 	tok, err := d.NextToken()
 	if err != nil {
 		return nil, err
@@ -428,8 +428,8 @@ func (d *Decoder) decodeValueAny() (interface{}, error) {
 	}
 }
 
-func (d *Decoder) decodeMapAny() (map[string]interface{}, error) {
-	m := make(map[string]interface{})
+func (d *Decoder) decodeMapAny() (map[string]any, error) {
+	m := make(map[string]any)
 	for {
 		tok, err := d.NextToken()
 		if err != nil {
@@ -474,8 +474,8 @@ func (d *Decoder) decodeMap(v reflect.Value) error {
 	}
 }
 
-func (d *Decoder) decodeSliceAny() ([]interface{}, error) {
-	s := make([]interface{}, 0, 1)
+func (d *Decoder) decodeSliceAny() ([]any, error) {
+	s := make([]any, 0, 1)
 	for {
 		tok, err := d.NextToken()
 		if err != nil {

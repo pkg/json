@@ -97,7 +97,7 @@ func ExampleDecoder_NextToken() {
 func ExampleDecoder_Decode() {
 	input := `{"a": 1,"b": 123.456, "c": [null]}`
 	dec := json.NewDecoder(strings.NewReader(input))
-	var i interface{}
+	var i any
 	err := dec.Decode(&i)
 	if err != nil {
 		log.Fatal(err)

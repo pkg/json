@@ -101,7 +101,7 @@ func BenchmarkDecoderDecodeInterfaceAny(b *testing.B) {
 			for i := 0; i < b.N; i++ {
 				r.Seek(0, 0)
 				dec := NewDecoderBuffer(r, buf[:])
-				var i interface{}
+				var i any
 				err := dec.Decode(&i)
 				check(b, err)
 			}
@@ -113,7 +113,7 @@ func BenchmarkDecoderDecodeInterfaceAny(b *testing.B) {
 			for i := 0; i < b.N; i++ {
 				r.Seek(0, 0)
 				dec := json.NewDecoder(r)
-				var i interface{}
+				var i any
 				err := dec.Decode(&i)
 				check(b, err)
 			}

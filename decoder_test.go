@@ -113,7 +113,7 @@ func TestDecoderInvalidJSON(t *testing.T) {
 
 func TestDecoderDecode(t *testing.T) {
 
-	assert := func(t *testing.T, v interface{}, want interface{}) {
+	assert := func(t *testing.T, v any, want any) {
 		t.Helper()
 		got := reflect.ValueOf(v).Interface()
 		if !reflect.DeepEqual(want, got) {
@@ -121,7 +121,7 @@ func TestDecoderDecode(t *testing.T) {
 		}
 	}
 
-	decode := func(t *testing.T, input string, v interface{}) {
+	decode := func(t *testing.T, input string, v any) {
 		t.Helper()
 		dec := NewDecoder(strings.NewReader(input))
 		err := dec.Decode(v)
@@ -143,13 +143,13 @@ func TestDecoderDecode(t *testing.T) {
 	})
 
 	t.Run("bool interface true", func(t *testing.T) {
-		var bi interface{} = false
+		var bi any = false
 		decode(t, "true", &bi)
 		assert(t, bi, true)
 	})
 
 	t.Run("bool interface false", func(t *testing.T) {
-		var bi interface{} = true
+		var bi any = true
 		decode(t, "false", &bi)
 		assert(t, bi, false)
 	})
@@ -173,7 +173,7 @@ func TestDecoderDecode(t *testing.T) {
 	})
 
 	t.Run("float64 interface", func(t *testing.T) {
-		var fi interface{}
+		var fi any
 		decode(t, "3", &fi)
 		assert(t, fi, 3.0)
 	})
@@ -209,29 +209,29 @@ func TestDecoderDecode(t *testing.T) {
 	})
 
 	t.Run("empty object", func(t *testing.T) {
-		var a interface{}
+		var a any
 		decode(t, "{}", &a)
-		assert(t, a, map[string]interface{}{})
+		assert(t, a, map[string]any{})
 	})
 
 	t.Run("nested object", func(t *testing.T) {
-		var a interface{}
+		var a any
 		decode(t, `{"a": 1, "b": {"c": 2}}`, &a)
-		assert(t, a, map[string]interface{}{
+		assert(t, a, map[string]any{
 			"a": float64(1),
-			"b": map[string]interface{}{
+			"b": map[string]any{
 				"c": float64(2),
 			},
 		})
 	})
 
 	t.Run("nested array of objects", func(t *testing.T) {
-		var a interface{}
+		var a any
 		decode(t, `[{"a": [{}]}]`, &a)
-		assert(t, a, []interface{}{
-			map[string]interface{}{
-				"a": []interface{}{
-					map[string]interface{}{},
+		assert(t, a, []any{
+			map[string]any{
+				"a": []any{
+					map[string]any{},
 				},
 			},
 		})
@@ -239,9 +239,9 @@ func TestDecoderDecode(t *testing.T) {
 
 	t.Run("object key with embedded quote", func(t *testing.T) {
 		t.Skip("known bug: decoder does not unescape backslashes in object keys")
-		var escaped interface{}
+		var escaped any
 		decode(t, `{"a\"b":0}`, &escaped)
-		assert(t, escaped, map[string]interface{}{`a"b`: 0.0})
+		assert(t, escaped, map[string]any{`a"b`: 0.0})
 	})
 
 	t.Run("map string string", func(t *testing.T) {
@@ -253,12 +253,12 @@ func TestDecoderDecode(t *testing.T) {
 	})
 
 	t.Run("map string interface", func(t *testing.T) {
-		mi := make(map[string]interface{})
+		mi := make(map[string]any)
 		decode(t, `{"a": 1, "b": false, "c":[1, 2.0, "three"]}`, &mi)
-		assert(t, mi, map[string]interface{}{
+		assert(t, mi, map[string]any{
 			"a": float64(1),
 			"b": false,
-			"c": []interface{}{
+			"c": []any{
 				float64(1),
 				2.0,
 				"three",
