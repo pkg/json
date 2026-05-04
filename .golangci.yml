@@ -1,28 +1,28 @@
+version: "2"
 run:
-  go: '1.21'
-
+  modules-download-mode: readonly
 linters:
-  enable-all: true
+  default: all
   disable:
     - asasalint
     - bodyclose
     - containedctx
     - contextcheck
     - cyclop
-    - deadcode # replaced with unused
     - depguard # too annoying
     - dupl
     - dupword
+    - embeddedstructfieldcheck
+    - err113
     - errcheck
     - errchkjson
     - errname
     - errorlint
-    - exhaustivestruct # Replaced by exhaustruct.
     - exhaustruct
     - exhaustive # too annoying, too hard to disable with comments
     - forbidigo
+    - funcorder
     - funlen
-    - gci
     - gochecknoglobals
     - gocognit
     - goconst
@@ -30,54 +30,40 @@ linters:
     - gocyclo
     - godot
     - godox
-    - goerr113
-    - gofumpt
-    - golint # Replaced by revive.
-    - gomnd
-    - ifshort
+    - godoclint
+    - gosec
     - inamedparam # too opinionated
-    - interfacer # deprecated
+    - intrange
     - ireturn
     - lll
     - maintidx
-    - maligned # Replaced by govet
+    - mnd
+    - modernize
     - musttag # flaky, fires on structs which aren't JSON marshalled
     - nilnil
     - nlreturn
     - noctx
+    - noinlineerr
     - nonamedreturns
-    - nosnakecase
     - paralleltest
-    - prealloc
-    - scopelint # Replaced by exportloopref.
-    - structcheck # replaced with unused
+    - perfsprint
     - tagliatelle
     - tagalign # too fussy
     - testpackage # too annoying
     - thelper
     - usestdlibvars
-    - varcheck # Replaced by unused.
     - varnamelen
     - whitespace
     - wrapcheck
     - wsl
-
-linters-settings:
-  gofumpt:
-    module-path: github.com/pkg/json
-  revive:
-    rules:
-    - name: var-naming
-      disabled: true
-  stylecheck:
-    checks: [
-      "all",
-      "-ST1003",
-      "-ST1012"
-    ]
-  unparam:
-    check-exported: false
-
+    - wsl_v5
+  settings:
+    revive:
+      rules:
+        - name: var-naming
+          disabled: true
+    unparam:
+      check-exported: false
 issues:
   max-issues-per-linter: 0
   max-same-issues: 0
