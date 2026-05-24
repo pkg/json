@@ -106,6 +106,19 @@ func BenchmarkDecoderDecodeInterfaceAny(b *testing.B) {
 				check(b, err)
 			}
 		})
+		b.Run("pkgjson/reuse/"+tc.path, func(b *testing.B) {
+			b.ReportAllocs()
+			b.SetBytes(r.Size())
+			b.ResetTimer()
+			dec := NewDecoderBuffer(r, buf[:])
+			for i := 0; i < b.N; i++ {
+				r.Seek(0, 0)
+				dec.Reset(r)
+				var i interface{}
+				err := dec.Decode(&i)
+				check(b, err)
+			}
+		})
 		b.Run("encodingjson/"+tc.path, func(b *testing.B) {
 			b.ReportAllocs()
 			b.SetBytes(r.Size())

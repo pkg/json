@@ -107,6 +107,12 @@ func (s *Scanner) Next() []byte {
 	}
 }
 
+// Reset resets the scanner to read from a new io.Reader to avoid reallocation.
+func (s *Scanner) Reset(r io.Reader) {
+	s.br.reset(r)
+	s.offset = 0
+}
+
 func (s *Scanner) validateToken(expected string) int {
 	for {
 		w := s.br.window()

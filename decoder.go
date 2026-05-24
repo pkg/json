@@ -111,6 +111,13 @@ func (d *Decoder) NextToken() ([]byte, error) {
 	return d.state(d)
 }
 
+// Reset resets the decoder to read from a new io.Reader to avoid reallocation.
+func (d *Decoder) Reset(r io.Reader) {
+	d.scanner.Reset(r)
+	d.state = (*Decoder).stateValue
+	d.stack = d.stack[:0]
+}
+
 func (d *Decoder) stateObjectString() ([]byte, error) {
 	tok := d.scanner.Next()
 	if len(tok) < 1 {

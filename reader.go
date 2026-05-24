@@ -68,3 +68,11 @@ func (b *byteReader) compact() {
 	copy(b.data, b.data[b.offset:])
 	b.offset = 0
 }
+
+// reset resets the byteReader to read from a new r without reallocating.
+func (b *byteReader) reset(r io.Reader) {
+	b.data = b.data[:0]
+	b.offset = 0
+	b.r = r
+	b.err = nil
+}
