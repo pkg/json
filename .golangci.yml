@@ -1,0 +1,69 @@
+version: "2"
+run:
+  modules-download-mode: readonly
+linters:
+  default: all
+  disable:
+    - asasalint
+    - bodyclose
+    - containedctx
+    - contextcheck
+    - cyclop
+    - depguard # too annoying
+    - dupl
+    - dupword
+    - embeddedstructfieldcheck
+    - err113
+    - errcheck
+    - errchkjson
+    - errname
+    - errorlint
+    - exhaustruct
+    - exhaustive # too annoying, too hard to disable with comments
+    - forbidigo
+    - funcorder
+    - funlen
+    - gochecknoglobals
+    - gocognit
+    - goconst
+    - gocritic
+    - gocyclo
+    - godot
+    - godox
+    - godoclint
+    - gosec
+    - inamedparam # too opinionated
+    - intrange
+    - ireturn
+    - lll
+    - maintidx
+    - mnd
+    - modernize
+    - musttag # flaky, fires on structs which aren't JSON marshalled
+    - nilnil
+    - nlreturn
+    - noctx
+    - noinlineerr
+    - nonamedreturns
+    - paralleltest
+    - perfsprint
+    - tagliatelle
+    - tagalign # too fussy
+    - testpackage # too annoying
+    - thelper
+    - usestdlibvars
+    - varnamelen
+    - whitespace
+    - wrapcheck
+    - wsl
+    - wsl_v5
+  settings:
+    revive:
+      rules:
+        - name: var-naming
+          disabled: true
+    unparam:
+      check-exported: false
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
